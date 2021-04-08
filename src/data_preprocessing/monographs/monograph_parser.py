@@ -83,7 +83,8 @@ def parse_monographs(urls, paths, dates, titles):
     :param paths: paths to pdfs with government monograph ruling
     :param dates: dates of each document
     :param titles: title of each document
-    :return:
+    :return: 3 tables ready for db insertion: monograph,
+    MonographDatePoints, GovernmentStatements
     """
     results = []
     monograph_encoder = LabelEncoder()

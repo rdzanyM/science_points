@@ -1,9 +1,8 @@
 import os
-from pathlib import Path
 import urllib.request
 
 
-def scrap_monographs(urls, data_path):
+def scrape_monographs(urls, data_path):
     paths = []
     for url in urls:
         filename = url.split('/')[-1]

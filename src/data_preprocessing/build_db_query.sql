@@ -37,7 +37,7 @@ CREATE TABLE MonographDatePoints (
 DROP TABLE IF EXISTS ConferenceDatePoints;
 CREATE TABLE ConferenceDatePoints (
 	conference_id integer,
-	government_statement_id integer,
+	starting_date date,
 	points integer
 );
 

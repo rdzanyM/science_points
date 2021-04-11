@@ -3,17 +3,14 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
-from typing import Type
-
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
-import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 
 
-def get_domain_form_group() -> Type[dbc.FormGroup]:
+def get_domain_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
             dbc.Label("Wybierz dziedziny"),
@@ -30,7 +27,7 @@ def get_domain_form_group() -> Type[dbc.FormGroup]:
     )
 
 
-def get_publication_type_form_group() -> Type[dbc.FormGroup]:
+def get_publication_type_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
             dbc.Label("Wybierz rodzaj publikacji"),
@@ -48,7 +45,7 @@ def get_publication_type_form_group() -> Type[dbc.FormGroup]:
     )
 
 
-def get_search_table() -> Type[html.Div]:
+def get_search_table() -> html.Div:
     table = html.Div([
         dash_table.DataTable(
 
@@ -114,7 +111,7 @@ def get_search_table() -> Type[html.Div]:
     return table
 
 
-def get_results_table() -> Type[html.Div]:
+def get_results_table() -> html.Div:
     table = html.Div([
         dash_table.DataTable(
             id='results-table',
@@ -143,7 +140,7 @@ def get_results_table() -> Type[html.Div]:
     return table
 
 
-def get_extra_buttons() -> Type[dbc.ButtonGroup]:
+def get_extra_buttons() -> dbc.ButtonGroup:
     return dbc.ButtonGroup([
         dbc.Button(
             "Importuj .csv",
@@ -152,7 +149,7 @@ def get_extra_buttons() -> Type[dbc.ButtonGroup]:
     ])
 
 
-def get_search_button() -> Type[dbc.Button]:
+def get_search_button() -> dbc.Button:
     return dbc.Button(
         "Szukaj",
         id='button-search',

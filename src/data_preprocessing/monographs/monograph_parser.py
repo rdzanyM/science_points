@@ -2,6 +2,9 @@ import pandas as pd
 import re
 import tabula
 from sklearn.preprocessing import LabelEncoder
+from typing import List
+
+from src import MonographConfigEntry
 
 
 def monograph_parser_strategy_1(table):
@@ -75,22 +78,19 @@ def monograph_parser_strategy_2(table):
     return table
 
 
-def parse_monographs(urls, paths, dates, titles):
+def parse_monographs(monograph_config: List[MonographConfigEntry]):
     """
     Parse tables with monographs.
     At the moment we don't merge with publisher_info to get DOI (no common column - names are different).
-    :param urls: urls to pdf with government monograph ruling
-    :param paths: paths to pdfs with government monograph ruling
-    :param dates: dates of each document
-    :param titles: title of each document
+    :param monograph_config:
     :return: 3 tables ready for db insertion: monograph,
     MonographDatePoints, GovernmentStatements
     """
     results = []
     monograph_encoder = LabelEncoder()
     government_document_encoder = LabelEncoder()
-    for url, path, date, title in zip(urls, paths, dates, titles):
-        table = tabula.read_pdf(path, pages='all',
+    for m in monograph_config:
+        table = tabula.read_pdf(m.path, pages='all',
                                 multiple_tables=True,
                                 pandas_options={'header': None},
                                 lattice=True)
@@ -102,9 +102,9 @@ def parse_monographs(urls, paths, dates, titles):
         else:
             # Add different parser strategies
             raise NotImplementedError()
-        result['starting_date'] = date
-        result['title'] = title
-        result['url'] = url
+        result['starting_date'] = m.date
+        result['title'] = m.title
+        result['url'] = m.url
         results.append(result)
     results = pd.concat(results)
     results['monograph_id'] = monograph_encoder.fit_transform(results['publisher_name'])

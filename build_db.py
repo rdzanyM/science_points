@@ -86,10 +86,18 @@ def journal_to_db(engine, data_path):
     titles = pd.DataFrame(columns=['id', 'title'])
     titles['title'] = journals['Tytuł 1'].unique()
     titles['id'] = titles.index
-    dates = titles.join(journals.set_index('Tytuł 1'), on='title', how='outer')[['id', 'date', 'points']]
+    joined = titles.join(journals.set_index('Tytuł 1'), on='title', how='outer')
+    dates = joined[['id','date','points']]
     dates.columns = ['journal_id', 'starting_date', 'points']
     titles.to_sql(name='Journals', con=engine, if_exists='append', index=False, index_label='id')
     dates.to_sql(name='JournalDatePoints', con=engine, if_exists='append', index=False, index_label=None)
+    domains = pd.DataFrame(columns=['id', 'name'])
+    domains['name'] = journals.columns[7:-2]
+    domains['id'] = domains.index
+    domains.to_sql(name='Domains', con=engine, if_exists='append', index=False, index_label=None)
+    domain_matrix = joined.drop_duplicates(['id']).sort_values(by=['id']).iloc[:, 8:-2].values
+    j_domains = pd.DataFrame(np.argwhere(domain_matrix), columns=['journal_id', 'domain_id'])
+    j_domains.to_sql(name='JournalDomains', con=engine, if_exists='append', index=False, index_label=None)
 
 
 if __name__ == '__main__':

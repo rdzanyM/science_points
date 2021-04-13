@@ -17,3 +17,6 @@ data_path: ./data
 
 # Path to SQLite file
 db_file: database.db
+
+# Path to the text index directory
+text_index_path: ./text_index

@@ -15,7 +15,7 @@ class Config:
         with open('config.yaml') as file:
             self._config = yaml.safe_load(file)
 
-    def get_setting(self, key: str):
+    def __getitem__(self, key: str):
         """
         Return a setting from the config
         :param key: key for the setting

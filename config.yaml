@@ -11,3 +11,9 @@ monographs:
   - url: https://www.bip.nauka.gov.pl/g2/oryginal/2020_09/1e07e3553c78f5d9ebb48c9210bc0520.pdf
     date: 29.09.2020
     title: Komunikat Ministra Nauki i Szkolnictwa Wyższego z dnia 29 września 2020 roku
+
+# Path to directory with raw data files
+data_path: ./data
+
+# Path to SQLite file
+db_file: database.db

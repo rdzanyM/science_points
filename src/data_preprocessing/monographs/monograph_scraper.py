@@ -1,11 +1,12 @@
 import os
 import urllib.request
+from pathlib import Path
 from typing import List
 
 from src import MonographConfigEntry
 
 
-def scrape_monographs(monograph_config: List[MonographConfigEntry], data_path) -> None:
+def scrape_monographs(monograph_config: List[MonographConfigEntry], data_path: Path) -> None:
     for monograph in monograph_config:
         filename = monograph.url.split('/')[-1]
         path = data_path / filename

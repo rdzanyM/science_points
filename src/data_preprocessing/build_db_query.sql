@@ -9,21 +9,19 @@ CREATE TABLE Monographs (
 DROP TABLE IF EXISTS Conferences;
 CREATE TABLE Conferences (
 	id integer PRIMARY KEY AUTOINCREMENT,
-	DOI string,
 	title string
 );
 
 DROP TABLE IF EXISTS Journals;
 CREATE TABLE Journals (
 	id integer PRIMARY KEY AUTOINCREMENT,
-	DOI string,
 	title string
 );
 
 DROP TABLE IF EXISTS JournalDatePoints;
 CREATE TABLE JournalDatePoints (
 	journal_id integer,
-	government_statement_id integer,
+	starting_date date,
 	points integer
 );
 
@@ -37,7 +35,7 @@ CREATE TABLE MonographDatePoints (
 DROP TABLE IF EXISTS ConferenceDatePoints;
 CREATE TABLE ConferenceDatePoints (
 	conference_id integer,
-	government_statement_id integer,
+	starting_date date,
 	points integer
 );
 

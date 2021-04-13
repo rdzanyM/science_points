@@ -3,12 +3,15 @@ from pathlib import Path
 from sqlalchemy import create_engine
 import sqlite3
 
-from src.data_preprocessing.monographs import parse_monographs, scrape_monographs, urls, dates, titles
+from src.data_preprocessing.monographs import parse_monographs, scrape_monographs
+from src import Config
 
 
 def monograph_to_db(engine, data_path):
-    paths = scrape_monographs(urls, data_path)
-    monographs, monograph_date_points, government_statements = parse_monographs(urls, paths, dates, titles)
+    monograph_config = Config().get_monograph_config()
+
+    scrape_monographs(monograph_config, data_path)
+    monographs, monograph_date_points, government_statements = parse_monographs(monograph_config)
     monographs.to_sql(name='monographs', con=engine, if_exists='append',
                       index=False, index_label='id')
     monograph_date_points.to_sql(name='MonographDatePoints', con=engine, if_exists='append',

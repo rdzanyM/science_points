@@ -22,8 +22,16 @@ def monograph_to_db(engine, config: Config):
                                  index=False, index_label='id')
 
 
-def conference_to_db(engine, data_path):
-    conferences = pd.DataFrame(columns=['title', 'points', 'date'])
+def conference_to_db(engine, config: Config):
+    data_path = config['data_path'] + '/journals'
+    conferences = pd.DataFrame(columns=['title', 'points', 'government_statement_id'])
+    gov = pd.DataFrame(config['journals']).reset_index()
+    government_statements = pd.DataFrame(columns=['id', 'url', 'title', 'starting_date'])
+    government_statements['id'] = gov['index'] + len(config['monographs'])
+    government_statements['url'] = gov['url']
+    government_statements['title'] = gov['title']
+    government_statements['starting_date'] = gov['date']
+    government_statements.to_sql(name='GovernmentStatements', con=engine, if_exists='append', index=False, index_label='id')
     for filename in os.listdir(data_path):
         c = pd.read_excel(os.path.join(data_path, filename), 1, header=0)
         c = c.iloc[:, 1:3]
@@ -33,19 +41,26 @@ def conference_to_db(engine, data_path):
         c['title'] = c['title'].str.extract(
             '((^.*[^\)\s]\s*$)|(.*(?=\([^\)]*\)\s?$)))')  # remove additional data in titles
         c['title'] = c['title'].str.extract('(.*[^\s](?=\s*$))')  # remove trailing spaces
-        c['date'] = filename[-15:-5]
+        c['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
         conferences = conferences.append(c)
     titles = pd.DataFrame(columns=['id', 'title'])
     titles['title'] = conferences['title'].unique()
     titles['id'] = titles.index
-    dates = titles.join(conferences.set_index('title'), on='title', how='outer')[['id', 'date', 'points']]
-    dates.columns = ['conference_id', 'starting_date', 'points']
+    dates = titles.join(conferences.set_index('title'), on='title', how='outer')[['id', 'government_statement_id', 'points']]
+    dates.columns = ['conference_id', 'government_statement_id', 'points']
     titles.to_sql(name='Conferences', con=engine, if_exists='append', index=False, index_label='id')
     dates.to_sql(name='ConferenceDatePoints', con=engine, if_exists='append', index=False, index_label=None)
 
 
-def journal_to_db(engine, data_path):
+def journal_to_db(engine, config: Config):
     journals = None
+    data_path = config['data_path'] + '/journals'
+    gov = pd.DataFrame(config['journals']).reset_index()
+    government_statements = pd.DataFrame(columns=['id', 'url', 'title', 'starting_date'])
+    government_statements['id'] = gov['index'] + len(config['monographs'])
+    government_statements['url'] = gov['url']
+    government_statements['title'] = gov['title']
+    government_statements['starting_date'] = gov['date']
     for filename in os.listdir(data_path):
         j = pd.read_excel(os.path.join(data_path, filename), 0, header=0)
         j = j.iloc[:, 1:]
@@ -63,7 +78,7 @@ def journal_to_db(engine, data_path):
         j.loc[j['issn'].isna(), 'issn'] = j[j['issn'].isna()]['issn 2']
         j.loc[j['e-issn'].isna(), 'e-issn'] = j[j['e-issn'].isna()]['e-issn 2']
 
-        j['date'] = filename[-15:-5]
+        j['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
         if journals is None:
             journals = j
         else:
@@ -73,8 +88,8 @@ def journal_to_db(engine, data_path):
     titles['title'] = journals['Tytuł 1'].unique()
     titles['id'] = titles.index
     joined = titles.join(journals.set_index('Tytuł 1'), on='title', how='outer')
-    dates = joined[['id', 'date', 'points']]
-    dates.columns = ['journal_id', 'starting_date', 'points']
+    dates = joined[['id', 'government_statement_id', 'points']]
+    dates.columns = ['journal_id', 'government_statement_id', 'points']
     titles.to_sql(name='Journals', con=engine, if_exists='append', index=False, index_label='id')
     dates.to_sql(name='JournalDatePoints', con=engine, if_exists='append', index=False, index_label=None)
     domains = pd.DataFrame(columns=['id', 'name'])
@@ -98,5 +113,5 @@ if __name__ == '__main__':
 
     os.makedirs(config['data_path'], exist_ok=True)
     monograph_to_db(engine, config)
-    conference_to_db(engine, './data/journals')
-    journal_to_db(engine, './data/journals')
+    conference_to_db(engine, config)
+    journal_to_db(engine, config)

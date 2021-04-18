@@ -21,7 +21,7 @@ CREATE TABLE Journals (
 DROP TABLE IF EXISTS JournalDatePoints;
 CREATE TABLE JournalDatePoints (
 	journal_id integer,
-	starting_date date,
+	government_statement_id integer,
 	points integer
 );
 
@@ -35,7 +35,7 @@ CREATE TABLE MonographDatePoints (
 DROP TABLE IF EXISTS ConferenceDatePoints;
 CREATE TABLE ConferenceDatePoints (
 	conference_id integer,
-	starting_date date,
+	government_statement_id integer,
 	points integer
 );
 

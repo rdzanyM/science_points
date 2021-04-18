@@ -1,6 +1,9 @@
+dash==1.19.0
+dash_bootstrap_components==0.12.0
 tabula-py==2.2.0
 pandas==1.0.3
 PyPDF2==1.26.0
+PyYAML==5.4.1
 urllib3==1.25.8
 sklearn
 SQLAlchemy==1.4.6

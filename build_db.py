@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 import sqlite3
 
 from src.data_preprocessing.monographs import parse_monographs, scrape_monographs
+from src.orm import Base
 from src import Config
 
 
@@ -49,6 +50,7 @@ def conference_to_db(engine, config: Config):
     dates = titles.join(conferences.set_index('title'), on='title', how='outer')[['id', 'government_statement_id', 'points']]
     dates.columns = ['conference_id', 'government_statement_id', 'points']
     titles.to_sql(name='Conferences', con=engine, if_exists='append', index=False, index_label='id')
+    dates.drop_duplicates(inplace=True)
     dates.to_sql(name='ConferenceDatePoints', con=engine, if_exists='append', index=False, index_label=None)
 
 
@@ -91,6 +93,8 @@ def journal_to_db(engine, config: Config):
     dates = joined[['id', 'government_statement_id', 'points']]
     dates.columns = ['journal_id', 'government_statement_id', 'points']
     titles.to_sql(name='Journals', con=engine, if_exists='append', index=False, index_label='id')
+    # drop duplicates
+    dates = dates.groupby(['journal_id', 'government_statement_id'])['points'].max().reset_index()
     dates.to_sql(name='JournalDatePoints', con=engine, if_exists='append', index=False, index_label=None)
     domains = pd.DataFrame(columns=['id', 'name'])
     domains['name'] = journals.columns[7:-2]
@@ -108,8 +112,10 @@ if __name__ == '__main__':
     cur = con.cursor()
     engine = create_engine(f"sqlite:///{config['db_file']}")
 
-    with open('src/data_preprocessing/build_db_query.sql') as query_file:
+    with open('src/data_preprocessing/drop_all_tables.sql') as query_file:
         cur.executescript(query_file.read())
+
+    Base.metadata.create_all(engine)
 
     os.makedirs(config['data_path'], exist_ok=True)
     monograph_to_db(engine, config)

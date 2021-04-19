@@ -20,3 +20,13 @@ db_file: database.db
 
 # Path to the text index directory
 text_index_path: ./text_index
+
+# List of documents with points for journals/conferences
+journals:
+  - url: https://www.gov.pl/web/edukacja-i-nauka/nowe-rozszerzone-wykazy-czasopism-naukowych-i-recenzowanych-materialow-z-konferencji-miedzynarodowych-oraz-wydawnictw-monografii-naukowych
+    date: 18.12.2019
+    title: Komunikat Ministra Nauki i Szkolnictwa Wyzszego z dnia 18 grudnia 2019 roku w sprawie wykazu czasopism naukowych i recenzowanych materialow z konferencji miedzynarodowych
+
+  - url: https://www.gov.pl/web/edukacja-i-nauka/nowy-rozszerzony-wykaz-czasopism-naukowych-i-recenzowanych-materialow-z-konferencji-miedzynarodowych
+    date: 09.02.2021
+    title: Komunikat Ministra Edukacji i Nauki z dnia 9 lutego 2021 r. w sprawie wykazu czasopism naukowych i recenzowanych materialow z konferencji miedzynarodowych

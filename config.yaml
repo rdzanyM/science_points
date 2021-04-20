@@ -28,5 +28,9 @@ data_path: ./data
 # Path to SQLite file
 db_file: ./db/database.db
 
-# Path to the text index directory
-text_index_path: ./db/text_index
+search:
+  # Path to the text index directory
+  index_path: ./db/text_index
+
+  # Multiplier for boosting results with matching science domains
+  matching_domains_boost: 1.7

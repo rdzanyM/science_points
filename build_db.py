@@ -115,15 +115,15 @@ if __name__ == '__main__':
     cur = con.cursor()
     engine = create_engine(f"sqlite:///{config['db_file']}")
 
-    # with open('src/data_preprocessing/drop_all_tables.sql') as query_file:
-    #     cur.executescript(query_file.read())
-    #
-    # Base.metadata.create_all(engine)
-    #
-    # os.makedirs(config['data_path'], exist_ok=True)
-    # monograph_to_db(engine, config)
-    # conference_to_db(engine, config)
-    # journal_to_db(engine, config)
+    with open('src/data_preprocessing/drop_all_tables.sql') as query_file:
+        cur.executescript(query_file.read())
+
+    Base.metadata.create_all(engine)
+
+    os.makedirs(config['data_path'], exist_ok=True)
+    monograph_to_db(engine, config)
+    conference_to_db(engine, config)
+    journal_to_db(engine, config)
 
     # Build the text index
     Session = sessionmaker(bind=engine)

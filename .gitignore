@@ -133,8 +133,5 @@ dmypy.json
 # PDF files downloaded on build
 /data/*.pdf
 
-# The database
-database.db
-
-# The text index
-text_index/
+# The database and the text index
+db/

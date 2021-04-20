@@ -5,7 +5,7 @@ pandas==1.2.4
 PyPDF2==1.26.0
 PyYAML==5.4.1
 urllib3==1.25.8
-sklearn==0.0
+sklearn
 SQLAlchemy==1.4.6
 openpyxl==3.0.5
 Whoosh==2.7.4

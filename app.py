@@ -19,7 +19,7 @@ def get_domain_form_group() -> dbc.FormGroup:
                     {"label": "Matematyka", "value": 'matematyka'},
                     {"label": "Informatyka", "value": 'informatyka'},
                 ],
-                value=[],
+                value=['matematyka', 'informatyka'],
                 id="domain-input",
                 inline=True
             ),
@@ -37,7 +37,7 @@ def get_publication_type_form_group() -> dbc.FormGroup:
                     {"label": "konferencje", "value": 'konferencje'},
                     {"label": "monografie", "value": 'monografie'},
                 ],
-                value=[],
+                value='czasopisma',
                 id="publication-type-input",
                 inline=True
             ),

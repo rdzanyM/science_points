@@ -13,6 +13,8 @@ import dash_html_components as html
 
 from src import Config
 from src.text_index import IndexReader
+from src.app_utils import format_colors_based_on_similarity 
+from src.app_utils import format_suggestions_based_on_search
 
 config = Config()
 ir = IndexReader(config)
@@ -86,7 +88,7 @@ def get_search_table() -> html.Div:
                 }
             },
 
-            style_as_list_view=True,
+            style_as_list_view=False,
 
             style_cell={'padding': '5px'},
 
@@ -95,13 +97,19 @@ def get_search_table() -> html.Div:
                 'fontWeight': 'bold',
                 'textAlign': 'left',
             },
-
+        
             style_cell_conditional=[
                 {
                     'if': {'column_id': 'Date'},
                     'width': '140px',
                 },
             ],
+            
+            style_data={
+                'whiteSpace': 'normal',
+                'height': 'auto',
+                'lineHeight': '15px'
+            },
 
             editable=True,
             row_deletable=True,
@@ -127,8 +135,16 @@ def get_results_table() -> html.Div:
                 {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
                 {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
                 {'id': 'Points', 'name': 'Punktacja', 'type': 'numeric', },
+                {'id': 'Similarity', 'name': 'Zgodność z wyszukaniem', 'type': 'numeric', },
             ],
+            style_as_list_view=True,
 
+            style_data={
+                'whiteSpace': 'normal',
+                'height': 'auto',
+                'lineHeight': '15px'
+            },
+            
             style_cell_conditional=[
                 {
                     'if': {'column_id': 'Date'},
@@ -139,7 +155,8 @@ def get_results_table() -> html.Div:
                     'if': {'column_id': 'Points'},
                     'width': '60px',
                 },
-            ],
+                
+            ] + format_colors_based_on_similarity(),
             row_deletable=True,
             row_selectable='multi',
             tooltip_duration=None,
@@ -219,11 +236,18 @@ def search(n_clicks, domains, publication_type, search_table_data):
     tooltip_data = []
     for row in search_table_data:
 
-        _, df = query_function(row["Title"])
-        data.append({'Title': df.name.iloc[0], 'Date': row["Date"], 'Points': [150]})
+        sim, df = query_function(row["Title"])
+
+        data.append({
+            'Title': df.name.iloc[0], 
+            'Date': row["Date"],
+            'Points': [150],
+            'Similarity': sim
+        })
+
         tooltip_data.append({
             'Title': {
-                'value': f'Szukano: *{row["Title"]}*.\n\n Inne sugestie:\n1. {df.name.iloc[1]}\n2. {df.name.iloc[2]}\n2. {df.name.iloc[3]}',
+                'value': format_suggestions_based_on_search(row['Title'], df),
                 'type': 'markdown',
                 },
             'Points': {'value': 'Kliknij aby zobaczyć szczegóły', 'type': 'text'}

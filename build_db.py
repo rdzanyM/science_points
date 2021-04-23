@@ -5,9 +5,12 @@ from pathlib import Path
 from sqlalchemy import create_engine
 import sqlite3
 
+from sqlalchemy.orm import sessionmaker
+
 from src.data_preprocessing.monographs import parse_monographs, scrape_monographs
 from src.orm import Base
 from src import Config
+from src.text_index import IndexBuilder
 
 
 def monograph_to_db(engine, config: Config):
@@ -121,3 +124,8 @@ if __name__ == '__main__':
     monograph_to_db(engine, config)
     conference_to_db(engine, config)
     journal_to_db(engine, config)
+
+    # Build the text index
+    Session = sessionmaker(bind=engine)
+    index_builder = IndexBuilder(config, Session())
+    index_builder.build_index()

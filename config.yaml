@@ -12,12 +12,6 @@ monographs:
     date: 29.09.2020
     title: Komunikat Ministra Nauki i Szkolnictwa Wyższego z dnia 29 września 2020 roku
 
-# Path to directory with raw data files
-data_path: ./data
-
-# Path to SQLite file
-db_file: database.db
-
 # List of documents with points for journals/conferences
 journals:
   - url: https://www.gov.pl/web/edukacja-i-nauka/nowe-rozszerzone-wykazy-czasopism-naukowych-i-recenzowanych-materialow-z-konferencji-miedzynarodowych-oraz-wydawnictw-monografii-naukowych
@@ -27,3 +21,16 @@ journals:
   - url: https://www.gov.pl/web/edukacja-i-nauka/nowy-rozszerzony-wykaz-czasopism-naukowych-i-recenzowanych-materialow-z-konferencji-miedzynarodowych
     date: 09.02.2021
     title: Komunikat Ministra Edukacji i Nauki z dnia 9 lutego 2021 r. w sprawie wykazu czasopism naukowych i recenzowanych materialow z konferencji miedzynarodowych
+
+# Path to directory with raw data files
+data_path: ./data
+
+# Path to SQLite file
+db_file: ./db/database.db
+
+search:
+  # Path to the text index directory
+  index_path: ./db/text_index
+
+  # Multiplier for boosting results with matching science domains
+  matching_domains_boost: 1.7

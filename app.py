@@ -3,11 +3,19 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
+from functools import partial
+
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
 import dash_bootstrap_components as dbc
 import dash_html_components as html
+
+from src import Config
+from src.text_index import IndexReader
+
+config = Config()
+ir = IndexReader(config)
 
 
 def get_domain_form_group() -> dbc.FormGroup:
@@ -134,7 +142,8 @@ def get_results_table() -> html.Div:
             ],
             row_deletable=True,
             row_selectable='multi',
-
+            tooltip_duration=None,
+            tooltip_delay=0,
         ),
     ])
     return table
@@ -197,23 +206,28 @@ def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
         return None, None
 
-    print(domains, publication_type)
+    if publication_type == 'czasopisma':
+        query_function = partial(ir.query_journals, domains=domains)
 
-    # Magic should happen here
-    # search_table_data is raw input form search table
-    # use domains and publication_type to filter data
+    elif publication_type == 'konferencje':
+        query_function = ir.query_conferences
 
-    data = [
-        {'Title': row["Title"], 'Date': row["Date"], 'Points': [150]}
-        for row in search_table_data
-    ]
+    elif publication_type == 'monografie':
+        query_function = ir.query_monographs
 
-    tooltip_data = [
-        {
-            'Title': {'value': f'Szukano: *{row["Title"]}*.\n\n Inne sugestie:\n1. asdf\n2. asdf2', 'type': 'markdown'},
+    data = []
+    tooltip_data = []
+    for row in search_table_data:
+
+        _, df = query_function(row["Title"])
+        data.append({'Title': df.name.iloc[0], 'Date': row["Date"], 'Points': [150]})
+        tooltip_data.append({
+            'Title': {
+                'value': f'Szukano: *{row["Title"]}*.\n\n Inne sugestie:\n1. {df.name.iloc[1]}\n2. {df.name.iloc[2]}\n2. {df.name.iloc[3]}',
+                'type': 'markdown',
+                },
             'Points': {'value': 'Kliknij aby zobaczyć szczegóły', 'type': 'text'}
-        } for row in data
-    ]
+        })
 
     return data, tooltip_data
 

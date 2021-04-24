@@ -11,13 +11,16 @@ import dash_table
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 
+
 from src import Config
 from src.text_index import IndexReader
 from src.app_utils import format_colors_based_on_similarity 
 from src.app_utils import format_suggestions_based_on_search
+from src.orm import Cursor
 
 config = Config()
 ir = IndexReader(config)
+db_cursor = Cursor(config)
 
 
 def get_domain_form_group() -> dbc.FormGroup:
@@ -237,11 +240,16 @@ def search(n_clicks, domains, publication_type, search_table_data):
     for row in search_table_data:
 
         sim, df = query_function(row["Title"])
+        date_points = db_cursor.get_date_points(df.name.iloc[0], publication_type)
+        for _, date, points in date_points:
+            points_for_selected_date = points
+            if date > row['Date']:
+                break
 
         data.append({
             'Title': df.name.iloc[0], 
             'Date': row["Date"],
-            'Points': [150],
+            'Points': [points_for_selected_date],
             'Similarity': sim
         })
 

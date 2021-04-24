@@ -34,7 +34,7 @@ def conference_to_db(engine, config: Config):
     government_statements['id'] = gov['index'] + len(config['monographs'])
     government_statements['url'] = gov['url']
     government_statements['title'] = gov['title']
-    government_statements['starting_date'] = gov['date']
+    government_statements['starting_date'] = pd.to_datetime(gov['date'])
     government_statements.to_sql(name='GovernmentStatements', con=engine, if_exists='append', index=False, index_label='id')
     for filename in os.listdir(data_path):
         c = pd.read_excel(os.path.join(data_path, filename), 1, header=0)
@@ -65,7 +65,7 @@ def journal_to_db(engine, config: Config):
     government_statements['id'] = gov['index'] + len(config['monographs'])
     government_statements['url'] = gov['url']
     government_statements['title'] = gov['title']
-    government_statements['starting_date'] = gov['date']
+    government_statements['starting_date'] = pd.to_datetime(gov['date'])
     for filename in os.listdir(data_path):
         j = pd.read_excel(os.path.join(data_path, filename), 0, header=0)
         j = j.iloc[:, 1:]

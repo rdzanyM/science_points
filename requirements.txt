@@ -10,3 +10,4 @@ SQLAlchemy==1.4.6
 openpyxl==3.0.5
 Whoosh==2.7.4
 jellyfish==0.8.2
+colorlover==0.3.0

@@ -45,10 +45,12 @@ class Cursor:
 
     def get_date_points(self, title, publication_type):
         if publication_type == 'czasopisma':
-            return self.get_journal_date_points(title)
+            result = self.get_journal_date_points(title)
         elif publication_type == 'konferencje':
-            return self.get_conference_date_points(title)
+            result = self.get_conference_date_points(title)
         elif publication_type == 'monografie':
-            return self.get_monograph_date_points(title)
+            result = self.get_monograph_date_points(title)
         else:
             raise RuntimeError(f'Unknown publication type: {publication_type}')
+        result.sort(key=lambda x: x[1])
+        return result

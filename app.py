@@ -186,19 +186,51 @@ def get_search_button() -> dbc.Button:
         block=True)
 
 
+def get_sidebar():
+    return html.Div(
+    [
+        html.H2("Wyszukiwarka punktów", className="display-4"),
+        html.Hr(),
+        html.P(
+            "Wypełnij formularz po prawej stronie, a następnie wciśnij `Szukaj`. Kliknij na wynik wyszukiwania aby zobaczyć więcej informacji.",
+            className="lead",
+            id='starting-info'
+        ),
+
+    ],
+    style={
+        "position": "fixed",
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "width": "30rem",
+        "padding": "2rem 1rem",
+        "background-color": "#f8f9fa",
+    },
+    id='sidebar'
+)
+
+def get_content():
+    return html.Div(
+        id="page-content",
+        style={
+            "margin-left": "34rem",
+            "margin-right": "4rem",
+            "padding": "2rem 1rem",
+        },
+        children=[
+            get_domain_form_group(),
+            get_publication_type_form_group(),
+            get_search_table(),
+            get_extra_buttons(),
+            get_search_button(),
+            get_results_table(),
+        ],
+    )
+
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = dbc.Container(
-    children=[
-        get_domain_form_group(),
-        get_publication_type_form_group(),
-        get_search_table(),
-        get_extra_buttons(),
-        get_search_button(),
-        get_results_table(),
-    ],
-    className="p-5",
-)
+app.layout = html.Div([get_sidebar(), get_content()])
 
 
 @app.callback(
@@ -250,6 +282,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
             'Title': df.name.iloc[0], 
             'Date': row["Date"],
             'Points': [points_for_selected_date],
+            'PointsHistory': date_points,
             'Similarity': sim
         })
 

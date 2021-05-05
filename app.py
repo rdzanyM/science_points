@@ -161,7 +161,7 @@ def get_results_table() -> html.Div:
                 
             ] + format_colors_based_on_similarity(),
             row_deletable=True,
-            row_selectable='multi',
+            row_selectable=False,
             tooltip_duration=None,
             tooltip_delay=0,
         ),
@@ -188,7 +188,7 @@ def get_search_button() -> dbc.Button:
 
 def get_sidebar():
     return html.Div(
-    [
+    children=[
         html.H2("Wyszukiwarka punktów", className="display-4"),
         html.Hr(),
         html.P(
@@ -296,6 +296,41 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
     return data, tooltip_data
 
+@app.callback(
+    Output('sidebar', 'children'),
+    Input('results-table', 'selected_cells'),
+    State('results-table', 'data'),
+    State('sidebar', 'children')
+
+)
+def update_sidebar_on_row_click(selected_cells, data, current_children):
+    if selected_cells is None:
+        return current_children
+
+    selected_row = data[selected_cells[0]['row']]
+
+    table_header = [
+        html.Thead(html.Tr([html.Th("Data obowiązwania"), html.Th("Punkty")]))
+    ]
+
+    past_points = [
+        html.Tr([html.Td(date), html.Td(points)])
+        for _, date, points in selected_row['PointsHistory']
+        ]
+
+    table_body = [html.Tbody(past_points)]
+
+    return  [
+        html.H2("Wyszukiwarka punktów", className="display-4"),
+        html.Hr(),
+        html.H4(
+            selected_row['Title'],
+        ),
+        html.P(
+            'Wartości punktowe w czasie:'
+        ),
+        dbc.Table(table_header + table_body, bordered=True), 
+    ]
 
 if __name__ == "__main__":
     app.run_server()

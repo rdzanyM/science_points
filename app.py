@@ -8,6 +8,7 @@ from functools import partial
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
+from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 
@@ -138,7 +139,11 @@ def get_results_table() -> html.Div:
                 {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
                 {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
                 {'id': 'Points', 'name': 'Punktacja', 'type': 'numeric', },
-                {'id': 'Similarity', 'name': 'Zgodność z wyszukaniem', 'type': 'numeric', },
+                {'id': 'Similarity', 
+                 'name': 'Zgodność z wyszukaniem', 
+                 'type': 'numeric', 
+                 'format': Format(precision=4, scheme=Scheme.fixed)
+                }
             ],
             style_as_list_view=True,
 

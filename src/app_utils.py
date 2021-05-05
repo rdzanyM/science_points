@@ -16,14 +16,25 @@ def format_suggestions_based_on_search(searched_term: str, search_result: pd.Dat
     return markdown_value
 
 def format_colors_based_on_similarity():
-    scale = cl.scales['5']['seq']['Reds']
+    scale = cl.scales['5']['div']['RdYlGn']
     return [
+
         {
             'if': {
                 'column_id': 'Similarity',
                 'filter_query': '{Similarity} >= 0.9'
             },
-            'backgroundColor': scale[0],
+            'backgroundColor': scale[4],
+            'color': 'white'
+        },
+
+        {
+            'if': {
+                'column_id': 'Similarity',
+
+                'filter_query': '{Similarity} >= 0.8 && {Similarity} < 0.9'
+            },
+            'backgroundColor': scale[3],
             'color': 'black'
         },
 
@@ -31,39 +42,29 @@ def format_colors_based_on_similarity():
             'if': {
                 'column_id': 'Similarity',
 
-                'filter_query': '{Similarity} >= 0.7 && {Similarity} < 0.9'
-            },
-            'backgroundColor': scale[1],
-            'color': 'white'
-        },
-
-        {
-            'if': {
-                'column_id': 'Similarity',
-
-                'filter_query': '{Similarity} >= 0.5 && {Similarity} < 0.7'
+                'filter_query': '{Similarity} >= 0.7 && {Similarity} < 0.8'
             },
             'backgroundColor': scale[2],
-            'color': 'white'
+            'color': 'black'
         },
         
         {
             'if': {
                 'column_id': 'Similarity',
 
-                'filter_query': '{Similarity} >= 0.3 && {Similarity} < 0.5'
+                'filter_query': '{Similarity} >= 0.6 && {Similarity} < 0.7'
             },
-            'backgroundColor': scale[3],
-            'color': 'white'
+            'backgroundColor': scale[1],
+            'color': 'black'
         },
         
         {
             'if': {
                 'column_id': 'Similarity',
 
-                'filter_query': '{Similarity} < 0.3'
+                'filter_query': '{Similarity} < 0.5'
             },
-            'backgroundColor': scale[4],
+            'backgroundColor': scale[0],
             'color': 'white'
         },
     ]

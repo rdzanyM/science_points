@@ -136,16 +136,17 @@ class IndexReader:
                     'domains_boost': self.matching_domains_boost if len(ds & domains) > 0 else 1
                 })
 
-        df = pd.DataFrame.from_records(results, index='id')
-        if len(df) == 0:
-            return 0, df
+        if len(results) == 0:
+            return 0, pd.DataFrame()
 
+        df = pd.DataFrame.from_records(results, index='id')
         df['score'] = df['score'] * df['domains_boost']
         df = df.sort_values(by='score', ascending=False).iloc[:5]
 
         # Rescale the results
         df['score'] = df['score'] / df['score'].max()
 
-        sim = jellyfish.jaro_winkler_similarity(df.iloc[0]['name'], text)
+        # Compute absolute similarity, but first lowercase both strings
+        sim = jellyfish.jaro_winkler_similarity(df.iloc[0]['name'].lower(), text.lower())
 
         return sim, df

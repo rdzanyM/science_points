@@ -11,7 +11,6 @@ import dash_table
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from sqlalchemy import create_engine
 
 from src import Config
 from src.text_index import IndexReader

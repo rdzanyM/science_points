@@ -1,14 +1,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src import Config
 from src.orm import Conferences, Journals, Monographs, JournalDatePoints, ConferenceDatePoints,\
     MonographDatePoints, GovernmentStatements
 
 
 class Cursor:
-    def __init__(self, config: Config):
-        self.session = Session(create_engine(f"sqlite:///{config['db_file']}"))
+    def __init__(self, config):
+        engine = create_engine(f"sqlite:///{config['db_file']}")
+        self.session = Session(engine)
 
     def get_conference_date_points(self, title):
         conferences = self.session.query(Conferences) \

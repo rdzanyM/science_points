@@ -11,7 +11,7 @@ import dash_table
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-
+from sqlalchemy import create_engine
 
 from src import Config
 from src.text_index import IndexReader
@@ -21,7 +21,6 @@ from src.orm import Cursor
 
 config = Config()
 ir = IndexReader(config)
-db_cursor = Cursor(config)
 
 
 def get_domain_form_group() -> dbc.FormGroup:
@@ -263,6 +262,8 @@ def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
         return None, None
 
+    db_cursor = Cursor(config)
+
     if publication_type == 'czasopisma':
         query_function = partial(ir.query_journals, domains=domains)
 
@@ -272,19 +273,29 @@ def search(n_clicks, domains, publication_type, search_table_data):
     elif publication_type == 'monografie':
         query_function = ir.query_monographs
 
+    else:
+        raise RuntimeError("Unknown publication type!")
+
     data = []
     tooltip_data = []
     for row in search_table_data:
 
         sim, df = query_function(row["Title"])
-        date_points = db_cursor.get_date_points(df.name.iloc[0], publication_type)
-        for _, date, points in date_points:
-            points_for_selected_date = points
-            if date > row['Date']:
-                break
+        try:
+            name = df.name.iloc[0]
+            date_points = db_cursor.get_date_points(name, publication_type)
+            for _, date, points in date_points:
+                points_for_selected_date = points
+                if date > row['Date']:
+                    break
+        except AttributeError:  # No matches have been found for this title
+            sim = 0.0
+            name = ''
+            date_points = []
+            points_for_selected_date = 0
 
         data.append({
-            'Title': df.name.iloc[0], 
+            'Title': name,
             'Date': row["Date"],
             'Points': [points_for_selected_date],
             'PointsHistory': date_points,
@@ -336,6 +347,7 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
         ),
         dbc.Table(table_header + table_body, bordered=True), 
     ]
+
 
 if __name__ == "__main__":
     app.run_server()

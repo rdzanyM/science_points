@@ -6,9 +6,16 @@ from src.orm import Conferences, Journals, Monographs, JournalDatePoints, Confer
 
 
 class Cursor:
-    def __init__(self, config):
-        engine = create_engine(f"sqlite:///{config['db_file']}")
-        self.session = Session(engine)
+
+    def __init__(self, engine):
+        self.engine = engine
+
+    def __enter__(self):
+        self.session = Session(self.engine)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.session.close()
 
     def get_conference_date_points(self, title):
         conferences = self.session.query(Conferences) \

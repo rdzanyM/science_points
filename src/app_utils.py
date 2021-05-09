@@ -21,7 +21,6 @@ def format_suggestions_based_on_search(searched_term: str, search_result: pd.Dat
 def format_colors_based_on_similarity():
     scale = cl.scales['5']['div']['RdYlGn']
     return [
-
         {
             'if': {
                 'column_id': 'Similarity',
@@ -30,7 +29,6 @@ def format_colors_based_on_similarity():
             'backgroundColor': scale[4],
             'color': 'white'
         },
-
         {
             'if': {
                 'column_id': 'Similarity',

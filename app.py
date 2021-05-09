@@ -10,6 +10,7 @@ from dash.dependencies import Input, Output, State
 import dash_table
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
+import dash_core_components as dcc
 import dash_html_components as html
 from sqlalchemy import create_engine
 
@@ -106,12 +107,6 @@ def get_search_table() -> html.Div:
                 'textAlign': 'left',
                 'backgroundColor': 'var(--light)',
             },
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': 'Date'},
-                    'width': '140px',
-                },
-            ],
             style_data={
                 'whiteSpace': 'normal',
                 'height': 'auto',
@@ -126,43 +121,64 @@ def get_search_table() -> html.Div:
     return table
 
 
-def get_results_table() -> html.Div:
-    table = html.Div([
-        dash_table.DataTable(
-            id='results-table',
-            columns=[
-                {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
-                {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
-                {'id': 'Points', 'name': 'Punktacja', 'type': 'numeric', },
-                {'id': 'Similarity',
-                 'name': 'Dopasowanie',
-                 'type': 'numeric',
-                 'format': Format(precision=1, scheme=Scheme.percentage)
-                 }
-            ],
-            style_as_list_view=True,
-            style_data={
-                'whiteSpace': 'normal',
-                'height': 'auto',
-                'lineHeight': '15px'
-            },
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': 'Date'},
-                    'width': '140px',
+def get_results_wrapper() -> html.Div:
+    wrapper = dcc.Loading(
+        id='loading-results',
+        color='var(--primary)',
+        children=[
+            html.H4('Wyniki wyszukiwania'),
+            dash_table.DataTable(
+                id='results-table',
+                columns=[
+                    {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
+                    {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
+                    {'id': 'Points', 'name': 'Punkty', 'type': 'numeric', },
+                    {'id': 'Similarity',
+                     'name': 'Dopasowanie',
+                     'type': 'numeric',
+                     'format': Format(precision=1, scheme=Scheme.percentage)
+                     }
+                ],
+                style_cell={
+                    'padding': '0.2rem 0.3rem',
                 },
-                {
-                    'if': {'column_id': 'Points'},
-                    'width': '60px',
+                style_data={
+                    'whiteSpace': 'normal',
                 },
-            ] + format_colors_based_on_similarity(),
-            row_deletable=True,
-            row_selectable=False,
-            tooltip_duration=None,
-            tooltip_delay=0,
-        ),
-    ])
-    return table
+                style_header={
+                    'fontWeight': 'bold',
+                    'textAlign': 'left',
+                    'backgroundColor': 'var(--light)',
+                    'color': 'black',
+                },
+                style_cell_conditional=[
+                    {
+                        'if': {'column_id': 'Title'},
+                        'textAlign': 'left',
+                    },
+                    {
+                        'if': {'column_id': 'Date'},
+                        'textAlign': 'left',
+                    },
+                ] + format_colors_based_on_similarity(),
+                row_deletable=True,
+                row_selectable=False,
+                tooltip_duration=None,
+                tooltip_delay=0,
+            ),
+            html.Div(
+                dbc.Button(
+                    'Eksportuj do .csv',
+                    id='button-export',
+                    color='info',
+                    outline=True,
+                    className='mt-2'
+                ),
+                style={'text-align': 'right'}
+            ),
+        ],
+    )
+    return wrapper
 
 
 def get_extra_buttons() -> dbc.ButtonGroup:
@@ -229,7 +245,7 @@ def get_content_column():
                     row_extra_classes='mt-2',
                 ),
                 row_col([get_search_button()], [12], row_extra_classes='mt-3'),
-                row_col([get_results_table()], [12], row_extra_classes='mt-5'),
+                row_col([get_results_wrapper()], [12], row_extra_classes='mt-5'),
             ],
         ),
     )
@@ -244,12 +260,6 @@ app.layout = html.Div(
     ),
     className='container-fluid',
 )
-
-#html.Div(
-    #,
- #   className='container',
-#)
-
 
 
 @app.callback(
@@ -323,7 +333,9 @@ def search(n_clicks, domains, publication_type, search_table_data):
                     'value': format_suggestions_based_on_search(row['Title'], df),
                     'type': 'markdown',
                 },
-                'Points': {'value': 'Kliknij aby zobaczyć szczegóły', 'type': 'text'}
+                'Points': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
 
     return data, tooltip_data

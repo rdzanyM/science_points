@@ -29,11 +29,17 @@ engine = create_engine(f"sqlite:///{config['db_file']}")
 
 
 def get_domain_form_group() -> dbc.FormGroup:
+    with Cursor(engine) as cursor:
+        domains = cursor.get_domains()
+
     return dbc.FormGroup(
         [
             dbc.Label('Dziedziny:', className='lead'),
             dbc.Checklist(
                 options=[
+                    # The full list looks horrible, let's leave it out for now
+                    # {'label': domain, 'value': domain}
+                    # for domain in domains
                     {"label": "matematyka", "value": 'matematyka'},
                     {"label": "informatyka", "value": 'informatyka'},
                 ],

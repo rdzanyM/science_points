@@ -1,8 +1,10 @@
+from typing import List
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src.orm import Conferences, Journals, Monographs, JournalDatePoints, ConferenceDatePoints,\
-    MonographDatePoints, GovernmentStatements
+from src.orm import Conferences, Journals, Monographs, JournalDatePoints, ConferenceDatePoints, \
+    MonographDatePoints, GovernmentStatements, Domains
 
 
 class Cursor:
@@ -61,3 +63,6 @@ class Cursor:
             raise RuntimeError(f'Unknown publication type: {publication_type}')
         result.sort(key=lambda x: x[1])
         return result
+
+    def get_domains(self) -> List[str]:
+        return [d.name for d in self.session.query(Domains.name)]

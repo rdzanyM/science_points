@@ -11,6 +11,7 @@ import dash_table
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_html_components as html
+from sqlalchemy import create_engine
 
 from src import Config
 from src.text_index import IndexReader
@@ -20,6 +21,7 @@ from src.orm import Cursor
 
 config = Config()
 ir = IndexReader(config)
+engine = create_engine(f"sqlite:///{config['db_file']}")
 
 
 def get_domain_form_group() -> dbc.FormGroup:
@@ -261,55 +263,58 @@ def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
         return None, None
 
-    db_cursor = Cursor(config)
+    with Cursor(engine) as db_cursor:
+        if publication_type == 'czasopisma':
+            query_function = partial(ir.query_journals, domains=domains)
 
-    if publication_type == 'czasopisma':
-        query_function = partial(ir.query_journals, domains=domains)
+        elif publication_type == 'konferencje':
+            query_function = ir.query_conferences
 
-    elif publication_type == 'konferencje':
-        query_function = ir.query_conferences
+        elif publication_type == 'monografie':
+            query_function = ir.query_monographs
 
-    elif publication_type == 'monografie':
-        query_function = ir.query_monographs
+        else:
+            raise RuntimeError("Unknown publication type!")
 
-    else:
-        raise RuntimeError("Unknown publication type!")
+        data = []
+        tooltip_data = []
+        for row in search_table_data:
 
-    data = []
-    tooltip_data = []
-    for row in search_table_data:
+            sim, df = query_function(row["Title"])
+            try:
+                name = df.name.iloc[0]
+                date_points = db_cursor.get_date_points(name, publication_type)
+                for _, date, points in date_points:
+                    points_for_selected_date = points
+                    if date > row['Date']:
+                        break
+            except AttributeError as e:
+                if 'name' in str(e):  # No matches have been found for this title
+                    sim = 0.0
+                    name = ''
+                    date_points = []
+                    points_for_selected_date = 0
+                else:
+                    raise e
 
-        sim, df = query_function(row["Title"])
-        try:
-            name = df.name.iloc[0]
-            date_points = db_cursor.get_date_points(name, publication_type)
-            for _, date, points in date_points:
-                points_for_selected_date = points
-                if date > row['Date']:
-                    break
-        except AttributeError:  # No matches have been found for this title
-            sim = 0.0
-            name = ''
-            date_points = []
-            points_for_selected_date = 0
+            data.append({
+                'Title': name,
+                'Date': row["Date"],
+                'Points': [points_for_selected_date],
+                'PointsHistory': date_points,
+                'Similarity': sim
+            })
 
-        data.append({
-            'Title': name,
-            'Date': row["Date"],
-            'Points': [points_for_selected_date],
-            'PointsHistory': date_points,
-            'Similarity': sim
-        })
-
-        tooltip_data.append({
-            'Title': {
-                'value': format_suggestions_based_on_search(row['Title'], df),
-                'type': 'markdown',
-                },
-            'Points': {'value': 'Kliknij aby zobaczyć szczegóły', 'type': 'text'}
-        })
+            tooltip_data.append({
+                'Title': {
+                    'value': format_suggestions_based_on_search(row['Title'], df),
+                    'type': 'markdown',
+                    },
+                'Points': {'value': 'Kliknij aby zobaczyć szczegóły', 'type': 'text'}
+            })
 
     return data, tooltip_data
+
 
 @app.callback(
     Output('sidebar', 'children'),
@@ -319,7 +324,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
 )
 def update_sidebar_on_row_click(selected_cells, data, current_children):
-    if selected_cells is None:
+    if selected_cells is None or len(selected_cells) == 0:
         return current_children
 
     selected_row = data[selected_cells[0]['row']]

@@ -112,6 +112,13 @@ def get_search_table() -> html.Div:
                 'height': 'auto',
                 'lineHeight': '15px'
             },
+            style_cell_conditional=[
+                {
+                    'if': {'state': 'selected'},
+                    'backgroundColor': '#dbf0ff',
+                    'border': '1px solid #3498db',
+                },
+            ],
             editable=True,
             row_deletable=True,
             page_action='none',
@@ -152,6 +159,11 @@ def get_results_wrapper() -> html.Div:
                     'color': 'black',
                 },
                 style_cell_conditional=[
+                    {
+                        'if': {'state': 'selected'},
+                        'backgroundColor': '#dbf0ff',
+                        'border': '1px solid #3498db',
+                    },
                     {
                         'if': {'column_id': 'Title'},
                         'textAlign': 'left',
@@ -235,8 +247,8 @@ def get_content_column():
         children=html.Div(
             className='container',
             children=[
-                row_col([get_domain_form_group()], [12], row_extra_classes='mt-3'),
-                row_col([get_publication_type_form_group()], [12]),
+                row_col([get_publication_type_form_group()], [12], row_extra_classes='mt-3'),
+                row_col([get_domain_form_group()], [12]),
                 row_col([get_search_table()], [12], row_extra_classes='mt-1'),
                 row_col(
                     [get_extra_buttons()],

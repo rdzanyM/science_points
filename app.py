@@ -149,7 +149,7 @@ def get_results_wrapper() -> html.Div:
                     {'id': 'Similarity',
                      'name': 'Dopasowanie',
                      'type': 'numeric',
-                     'format': Format(precision=1, scheme=Scheme.percentage)
+                     'format': Format(precision=0, scheme=Scheme.percentage)
                      }
                 ],
                 style_cell={
@@ -347,7 +347,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Date': row["Date"],
                 'Points': [points_for_selected_date],
                 'PointsHistory': date_points,
-                'Similarity': sim
+                'Similarity': round(float(sim), 2)
             })
 
             tooltip_data.append({

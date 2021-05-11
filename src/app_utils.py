@@ -43,7 +43,7 @@ def format_colors_based_on_similarity():
             'if': {
                 'column_id': 'Similarity',
 
-                'filter_query': '{Similarity} >= 0.7 && {Similarity} < 0.8'
+                'filter_query': '{Similarity} >= 0.65 && {Similarity} < 0.8'
             },
             'backgroundColor': scale[2],
             'color': 'black'
@@ -53,7 +53,7 @@ def format_colors_based_on_similarity():
             'if': {
                 'column_id': 'Similarity',
 
-                'filter_query': '{Similarity} >= 0.6 && {Similarity} < 0.7'
+                'filter_query': '{Similarity} >= 0.5 && {Similarity} < 0.65'
             },
             'backgroundColor': scale[1],
             'color': 'black'

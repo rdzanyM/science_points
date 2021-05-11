@@ -10,13 +10,17 @@ from dash.dependencies import Input, Output, State
 import dash_table
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
+import dash_core_components as dcc
 import dash_html_components as html
 from sqlalchemy import create_engine
 
 from src import Config
 from src.text_index import IndexReader
-from src.app_utils import format_colors_based_on_similarity 
-from src.app_utils import format_suggestions_based_on_search
+from src.app_utils import (
+    format_colors_based_on_similarity,
+    format_suggestions_based_on_search,
+    row_col,
+)
 from src.orm import Cursor
 
 config = Config()
@@ -25,15 +29,21 @@ engine = create_engine(f"sqlite:///{config['db_file']}")
 
 
 def get_domain_form_group() -> dbc.FormGroup:
+    with Cursor(engine) as cursor:
+        domains = cursor.get_domains()
+
     return dbc.FormGroup(
         [
-            dbc.Label("Wybierz dziedziny"),
+            dbc.Label('Dziedziny:', className='lead'),
             dbc.Checklist(
                 options=[
-                    {"label": "Matematyka", "value": 'matematyka'},
-                    {"label": "Informatyka", "value": 'informatyka'},
+                    # The full list looks horrible, let's leave it out for now
+                    {'label': domain, 'value': domain}
+                    for domain in domains
+                    # {"label": "matematyka", "value": 'matematyka'},
+                    # {"label": "informatyka", "value": 'informatyka'},
                 ],
-                value=['matematyka', 'informatyka'],
+                value=['informatyka'],
                 id="domain-input",
                 inline=True
             ),
@@ -44,17 +54,24 @@ def get_domain_form_group() -> dbc.FormGroup:
 def get_publication_type_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
-            dbc.Label("Wybierz rodzaj publikacji"),
-            dbc.RadioItems(
-                options=[
-                    {"label": "czasopisma", "value": 'czasopisma'},
-                    {"label": "konferencje", "value": 'konferencje'},
-                    {"label": "monografie", "value": 'monografie'},
+            dbc.Label('Rodzaj publikacji:', className='lead'),
+            html.Div(
+                [
+                    dbc.RadioItems(
+                        className="btn-group",
+                        labelClassName="btn btn-primary",
+                        labelCheckedClassName="active",
+                        options=[
+                            {"label": "czasopisma", "value": 'czasopisma'},
+                            {"label": "konferencje", "value": 'konferencje'},
+                            {"label": "monografie", "value": 'monografie'},
+                        ],
+                        value='czasopisma',
+                        id="publication-type-input",
+                    ),
                 ],
-                value='czasopisma',
-                id="publication-type-input",
-                inline=True
-            ),
+                className='radio-group',
+            )
         ]
     )
 
@@ -62,124 +79,139 @@ def get_publication_type_form_group() -> dbc.FormGroup:
 def get_search_table() -> html.Div:
     table = html.Div([
         dash_table.DataTable(
-
             id='search-table',
-
             columns=(
-                [{'id': 'Title', 'name': 'Tytuł', 'type': 'text', }] +
-                [{'id': 'Date', 'name': 'Data', 'type': 'datetime', }]
+                    [{'id': 'Title', 'name': 'Tytuł', 'type': 'text', }] +
+                    [{'id': 'Date', 'name': 'Data', 'type': 'datetime', }]
             ),
-
             data=[
                 {'Title': 'IEEE Transactions on Pattern Analysis and Machine Intelligence', 'Date': '2020'},
                 {'Title': 'IEEE Intelligent Systems', 'Date': '2018'},
                 {'Title': 'Foundations and Trends in Machine Learning',
-                    'Date': '2019-12-20'},
+                 'Date': '2019-12-20'},
                 {'Title': 'Science Robotics', 'Date': '2020-01-20'},
             ],
-
             tooltip={
                 'Title': {
-                    'value': 'Wpisz pełny lub częściowy tytuł.',
+                    'value': 'Pełny lub częściowy tytuł',
                     'use_with': 'both',
                     'delay': 500
                 },
-
                 'Date': {
                     'value': 'YYYY lub YYYY-MM-DD',
                     'use_with': 'both',
                     'delay': 500
                 }
             },
-
             style_as_list_view=False,
-
-            style_cell={'padding': '5px'},
-
-            style_header={
-                'backgroundColor': 'white',
-                'fontWeight': 'bold',
+            style_cell={
+                'padding': '5px',
                 'textAlign': 'left',
             },
-        
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': 'Date'},
-                    'width': '140px',
-                },
-            ],
-            
+            style_header={
+                'fontWeight': 'bold',
+                'textAlign': 'left',
+                'backgroundColor': 'var(--light)',
+            },
             style_data={
                 'whiteSpace': 'normal',
                 'height': 'auto',
                 'lineHeight': '15px'
             },
-
+            style_cell_conditional=[
+                {
+                    'if': {'state': 'selected'},
+                    'backgroundColor': '#dbf0ff',
+                    'border': '1px solid #3498db',
+                },
+            ],
             editable=True,
             row_deletable=True,
             page_action='none',
-            export_format='csv',
-            export_headers='display',
-        ),
-        dbc.Button(
-            'Dodaj wiersz',
-            id='button-add-row',
-            className='btn-success',
         ),
     ]
     )
     return table
 
 
-def get_results_table() -> html.Div:
-    table = html.Div([
-        dash_table.DataTable(
-            id='results-table',
-            columns=[
-                {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
-                {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
-                {'id': 'Points', 'name': 'Punktacja', 'type': 'numeric', },
-                {'id': 'Similarity', 
-                 'name': 'Zgodność z wyszukaniem', 
-                 'type': 'numeric', 
-                 'format': Format(precision=4, scheme=Scheme.fixed)
-                }
-            ],
-            style_as_list_view=True,
-
-            style_data={
-                'whiteSpace': 'normal',
-                'height': 'auto',
-                'lineHeight': '15px'
-            },
-            
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': 'Date'},
-                    'width': '140px',
+def get_results_wrapper() -> html.Div:
+    wrapper = dcc.Loading(
+        id='loading-results',
+        color='var(--primary)',
+        children=[
+            html.H4('Wyniki wyszukiwania'),
+            dash_table.DataTable(
+                id='results-table',
+                columns=[
+                    {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
+                    {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
+                    {'id': 'Points', 'name': 'Punkty', 'type': 'numeric', },
+                    {'id': 'Similarity',
+                     'name': 'Dopasowanie',
+                     'type': 'numeric',
+                     'format': Format(precision=1, scheme=Scheme.percentage)
+                     }
+                ],
+                style_cell={
+                    'padding': '0.2rem 0.3rem',
                 },
-
-                {
-                    'if': {'column_id': 'Points'},
-                    'width': '60px',
+                style_data={
+                    'whiteSpace': 'normal',
                 },
-                
-            ] + format_colors_based_on_similarity(),
-            row_deletable=True,
-            row_selectable=False,
-            tooltip_duration=None,
-            tooltip_delay=0,
-        ),
-    ])
-    return table
+                style_header={
+                    'fontWeight': 'bold',
+                    'textAlign': 'left',
+                    'backgroundColor': 'var(--light)',
+                    'color': 'black',
+                },
+                style_cell_conditional=[
+                    {
+                        'if': {'state': 'selected'},
+                        'backgroundColor': '#dbf0ff',
+                        'border': '1px solid #3498db',
+                    },
+                    {
+                        'if': {'column_id': 'Title'},
+                        'textAlign': 'left',
+                    },
+                    {
+                        'if': {'column_id': 'Date'},
+                        'textAlign': 'left',
+                    },
+                ] + format_colors_based_on_similarity(),
+                row_deletable=True,
+                row_selectable=False,
+                tooltip_duration=None,
+                tooltip_delay=0,
+            ),
+            html.Div(
+                dbc.Button(
+                    'Eksportuj do .csv',
+                    id='button-export',
+                    color='info',
+                    outline=True,
+                    className='mt-2'
+                ),
+                style={'text-align': 'right'}
+            ),
+        ],
+    )
+    return wrapper
 
 
 def get_extra_buttons() -> dbc.ButtonGroup:
     return dbc.ButtonGroup([
         dbc.Button(
+            'Dodaj wiersz',
+            id='button-add-row',
+            color='info',
+        ),
+        dbc.Button(
             "Importuj .csv",
             id='button-import',
-            className='btn-warning'),
+            color='info',
+            outline=True,
+        ),
     ])
 
 
@@ -187,55 +219,69 @@ def get_search_button() -> dbc.Button:
     return dbc.Button(
         "Szukaj",
         id='button-search',
-        className='btn-success',
-        block=True)
+        color='primary',
+        block=True
+    )
 
 
 def get_sidebar():
     return html.Div(
-    children=[
-        html.H2("Wyszukiwarka punktów", className="display-4"),
-        html.Hr(),
-        html.P(
-            "Wypełnij formularz po prawej stronie, a następnie wciśnij `Szukaj`. Kliknij na wynik wyszukiwania aby zobaczyć więcej informacji.",
-            className="lead",
-            id='starting-info'
-        ),
-
-    ],
-    style={
-        "position": "fixed",
-        "top": 0,
-        "left": 0,
-        "bottom": 0,
-        "width": "30rem",
-        "padding": "2rem 1rem",
-        "background-color": "#f8f9fa",
-    },
-    id='sidebar'
-)
-
-def get_content():
-    return html.Div(
-        id="page-content",
-        style={
-            "margin-left": "34rem",
-            "margin-right": "4rem",
-            "padding": "2rem 1rem",
-        },
         children=[
-            get_domain_form_group(),
-            get_publication_type_form_group(),
-            get_search_table(),
-            get_extra_buttons(),
-            get_search_button(),
-            get_results_table(),
+            html.H4("Kalkulator punktów ministerialnych"),
+            html.Hr(),
+            html.Div(
+                id='sidebar-content',
+                children=html.P(
+                    "Wypełnij formularz po prawej stronie, a następnie wciśnij „Szukaj”. Kliknij na wynik "
+                    "wyszukiwania, aby zobaczyć więcej informacji.",
+                    id='starting-info'
+                ),
+            )
         ],
+        className='bg-light col-3',
+        style={
+            'padding': '2rem 1rem',
+            'height': '100vh',
+        },
+        id='sidebar'
     )
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = html.Div([get_sidebar(), get_content()])
+def get_content_column():
+    return html.Div(
+        className='col-9',
+        children=html.Div(
+            className='container',
+            children=[
+                row_col([get_publication_type_form_group()], [12], row_extra_classes='mt-3'),
+                row_col([get_domain_form_group()], [12]),
+                row_col([get_search_table()], [12], row_extra_classes='mt-1'),
+                row_col(
+                    [get_extra_buttons()],
+                    [12],
+                    [{'text-align': 'right'}],
+                    row_extra_classes='mt-2',
+                ),
+                row_col([get_search_button()], [12], row_extra_classes='mt-3'),
+                row_col([get_results_wrapper()], [12], row_extra_classes='mt-5'),
+            ],
+        ),
+    )
+
+
+app = dash.Dash(
+    external_stylesheets=[dbc.themes.FLATLY],
+    title='Punkty ministerialne',
+    update_title='⌛ Punkty ministerialne',
+)
+
+app.layout = html.Div(
+    html.Div(
+        [get_sidebar(), get_content_column()],
+        className='row',
+    ),
+    className='container-fluid',
+)
 
 
 @app.callback(
@@ -245,7 +291,6 @@ app.layout = html.Div([get_sidebar(), get_content()])
     State('search-table', 'columns')
 )
 def add_row(n_clicks, rows, columns):
-
     if n_clicks is not None:
         rows.append({c['id']: '' for c in columns})
     return rows
@@ -309,19 +354,20 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Title': {
                     'value': format_suggestions_based_on_search(row['Title'], df),
                     'type': 'markdown',
-                    },
-                'Points': {'value': 'Kliknij aby zobaczyć szczegóły', 'type': 'text'}
+                },
+                'Points': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
 
     return data, tooltip_data
 
 
 @app.callback(
-    Output('sidebar', 'children'),
+    Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
     State('results-table', 'data'),
-    State('sidebar', 'children')
-
+    State('sidebar-content', 'children')
 )
 def update_sidebar_on_row_click(selected_cells, data, current_children):
     if selected_cells is None or len(selected_cells) == 0:
@@ -330,26 +376,24 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
     selected_row = data[selected_cells[0]['row']]
 
     table_header = [
-        html.Thead(html.Tr([html.Th("Data obowiązwania"), html.Th("Punkty")]))
+        html.Thead(html.Tr([html.Th('Data'), html.Th('Punkty')]))
     ]
 
     past_points = [
         html.Tr([html.Td(date), html.Td(points)])
         for _, date, points in selected_row['PointsHistory']
-        ]
+    ]
 
     table_body = [html.Tbody(past_points)]
 
-    return  [
-        html.H2("Wyszukiwarka punktów", className="display-4"),
-        html.Hr(),
-        html.H4(
+    return [
+        html.H5(
             selected_row['Title'],
         ),
         html.P(
             'Wartości punktowe w czasie:'
         ),
-        dbc.Table(table_header + table_body, bordered=True), 
+        dbc.Table(table_header + table_body, bordered=True),
     ]
 
 

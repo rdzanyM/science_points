@@ -241,7 +241,6 @@ def get_sidebar():
         className='bg-light col-3',
         style={
             'padding': '2rem 1rem',
-            'height': '100vh',
         },
         id='sidebar'
     )
@@ -249,6 +248,7 @@ def get_sidebar():
 
 def get_content_column():
     return html.Div(
+        id='content-column',
         className='col-9',
         children=html.Div(
             className='container',
@@ -264,8 +264,23 @@ def get_content_column():
                 ),
                 row_col([get_search_button()], [12], row_extra_classes='mt-3'),
                 row_col([get_results_wrapper()], [12], row_extra_classes='mt-5'),
+                row_col([], [], row_extra_classes='content-spacer'),
             ],
         ),
+    )
+
+
+def get_footer() -> html.Footer:
+    return html.Footer(
+        [
+            html.P('Józef Jasek, Michał Rdzany, Michał Sokólski, Piotr Sowiński – MINI PW 2021'),
+            html.P(html.A(
+                'Zobacz kod na GitHubie.',
+                href='https://github.com/rdzanyM/science_points',
+            ))
+        ],
+        id='footer',
+        className='text-primary',
     )
 
 
@@ -276,10 +291,13 @@ app = dash.Dash(
 )
 
 app.layout = html.Div(
-    html.Div(
-        [get_sidebar(), get_content_column()],
-        className='row',
-    ),
+    children=[
+        html.Div(
+            [get_sidebar(), get_content_column()],
+            className='row',
+        ),
+        get_footer(),
+    ],
     className='container-fluid',
 )
 

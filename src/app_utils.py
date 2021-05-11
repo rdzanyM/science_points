@@ -19,7 +19,7 @@ def format_suggestions_based_on_search(searched_term: str, search_result: pd.Dat
 
 
 def format_colors_based_on_similarity():
-    scale = cl.scales['5']['div']['RdYlGn']
+    scale = cl.scales['5']['seq']['PuBu']
     return [
         {
             'if': {
@@ -36,7 +36,7 @@ def format_colors_based_on_similarity():
                 'filter_query': '{Similarity} >= 0.8 && {Similarity} < 0.9'
             },
             'backgroundColor': scale[3],
-            'color': 'black'
+            'color': 'white'
         },
 
         {
@@ -66,7 +66,7 @@ def format_colors_based_on_similarity():
                 'filter_query': '{Similarity} < 0.5'
             },
             'backgroundColor': scale[0],
-            'color': 'white'
+            'color': 'black'
         },
     ]
 

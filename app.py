@@ -35,18 +35,16 @@ def get_domain_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
             dbc.Label('Dziedziny:', className='lead'),
-            dbc.Checklist(
+            dcc.Dropdown(
                 options=[
-                    # The full list looks horrible, let's leave it out for now
-                    {'label': domain, 'value': domain}
+                   {'label': domain, 'value': domain}
                     for domain in domains
-                    # {"label": "matematyka", "value": 'matematyka'},
-                    # {"label": "informatyka", "value": 'informatyka'},
                 ],
-                value=['informatyka'],
+                value=['matematyka', 'informatyka'],
+                multi=True,
                 id="domain-input",
-                inline=True
-            ),
+
+            )
         ]
     )
 
@@ -149,7 +147,7 @@ def get_results_wrapper() -> html.Div:
                     {'id': 'Similarity',
                      'name': 'Dopasowanie',
                      'type': 'numeric',
-                     'format': Format(precision=1, scheme=Scheme.percentage)
+                     'format': Format(precision=0, scheme=Scheme.percentage)
                      }
                 ],
                 style_cell={
@@ -346,7 +344,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Date': row["Date"],
                 'Points': [points_for_selected_date],
                 'PointsHistory': date_points,
-                'Similarity': sim
+                'Similarity': round(float(sim), 2)
             })
 
             tooltip_data.append({

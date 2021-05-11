@@ -37,11 +37,8 @@ def get_domain_form_group() -> dbc.FormGroup:
             dbc.Label('Dziedziny:', className='lead'),
             dbc.Checklist(
                 options=[
-                    # The full list looks horrible, let's leave it out for now
                     {'label': domain, 'value': domain}
                     for domain in domains
-                    # {"label": "matematyka", "value": 'matematyka'},
-                    # {"label": "informatyka", "value": 'informatyka'},
                 ],
                 value=['informatyka'],
                 id="domain-input",

@@ -269,12 +269,11 @@ def get_content_column():
     )
 
 
-app = dash.Dash(
+app = dash.Dash(__name__,
     external_stylesheets=[dbc.themes.FLATLY],
     title='Punkty ministerialne',
     update_title='⌛ Punkty ministerialne',
 )
-
 app.layout = html.Div(
     html.Div(
         [get_sidebar(), get_content_column()],
@@ -395,7 +394,7 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
         ),
         dbc.Table(table_header + table_body, bordered=True),
     ]
-
+server = app.server
 
 if __name__ == "__main__":
     app.run_server()

@@ -109,11 +109,10 @@ def parse_monographs(monograph_config: List[MonographConfigEntry]):
     results = pd.concat(results)
     results['monograph_id'] = monograph_encoder.fit_transform(results['publisher_name'])
     results['government_statement_id'] = government_document_encoder.fit_transform(results['title'])
-    # no DOI at the moment
-    results['DOI'] = None
-    monographs = results[['monograph_id', 'publisher_name', 'DOI']]\
+    monographs = results[['monograph_id', 'publisher_name']]\
         .rename(columns={'monograph_id': 'id'}).drop_duplicates('id').sort_values('id')
     monograph_date_points = results[['monograph_id', 'government_statement_id', 'points']]
     government_statements = results[['government_statement_id', 'url', 'title', 'starting_date']]\
         .rename(columns={'government_statement_id': 'id'}).drop_duplicates('id').sort_values('id')
+    government_statements['starting_date'] = pd.to_datetime(government_statements['starting_date'])
     return monographs, monograph_date_points, government_statements

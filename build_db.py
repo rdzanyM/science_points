@@ -5,8 +5,12 @@ from pathlib import Path
 from sqlalchemy import create_engine
 import sqlite3
 
+from sqlalchemy.orm import sessionmaker
+
 from src.data_preprocessing.monographs import parse_monographs, scrape_monographs
+from src.orm import Base
 from src import Config
+from src.text_index import IndexBuilder
 
 
 def monograph_to_db(engine, config: Config):
@@ -30,7 +34,7 @@ def conference_to_db(engine, config: Config):
     government_statements['id'] = gov['index'] + len(config['monographs'])
     government_statements['url'] = gov['url']
     government_statements['title'] = gov['title']
-    government_statements['starting_date'] = gov['date']
+    government_statements['starting_date'] = pd.to_datetime(gov['date'])
     government_statements.to_sql(name='GovernmentStatements', con=engine, if_exists='append', index=False, index_label='id')
     for filename in os.listdir(data_path):
         c = pd.read_excel(os.path.join(data_path, filename), 1, header=0)
@@ -50,6 +54,7 @@ def conference_to_db(engine, config: Config):
     dates.columns = ['conference_id', 'government_statement_id', 'points']
     dates = dates.sort_values('points').drop_duplicates(subset=['conference_id', 'government_statement_id'], keep='last')
     titles.to_sql(name='Conferences', con=engine, if_exists='append', index=False, index_label='id')
+    dates.drop_duplicates(inplace=True)
     dates.to_sql(name='ConferenceDatePoints', con=engine, if_exists='append', index=False, index_label=None)
 
 
@@ -61,7 +66,7 @@ def journal_to_db(engine, config: Config):
     government_statements['id'] = gov['index'] + len(config['monographs'])
     government_statements['url'] = gov['url']
     government_statements['title'] = gov['title']
-    government_statements['starting_date'] = gov['date']
+    government_statements['starting_date'] = pd.to_datetime(gov['date'])
     for filename in os.listdir(data_path):
         j = pd.read_excel(os.path.join(data_path, filename), 0, header=0)
         j = j.iloc[:, 1:]
@@ -93,6 +98,8 @@ def journal_to_db(engine, config: Config):
     dates.columns = ['journal_id', 'government_statement_id', 'points']
     dates = dates.sort_values('points').drop_duplicates(subset=['journal_id', 'government_statement_id'], keep='last')
     titles.to_sql(name='Journals', con=engine, if_exists='append', index=False, index_label='id')
+    # drop duplicates
+    dates = dates.groupby(['journal_id', 'government_statement_id'])['points'].max().reset_index()
     dates.to_sql(name='JournalDatePoints', con=engine, if_exists='append', index=False, index_label=None)
     domains = pd.DataFrame(columns=['id', 'name'])
     domains['name'] = journals.columns[7:-2]
@@ -110,10 +117,17 @@ if __name__ == '__main__':
     cur = con.cursor()
     engine = create_engine(f"sqlite:///{config['db_file']}")
 
-    with open('src/data_preprocessing/build_db_query.sql') as query_file:
+    with open('src/data_preprocessing/drop_all_tables.sql') as query_file:
         cur.executescript(query_file.read())
+
+    Base.metadata.create_all(engine)
 
     os.makedirs(config['data_path'], exist_ok=True)
     monograph_to_db(engine, config)
     conference_to_db(engine, config)
     journal_to_db(engine, config)
+
+    # Build the text index
+    Session = sessionmaker(bind=engine)
+    index_builder = IndexBuilder(config, Session())
+    index_builder.build_index()

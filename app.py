@@ -4,6 +4,7 @@
 # visit http://127.0.0.1:8050/ in your web browser.
 
 from functools import partial
+import pandas as pd
 
 import dash
 from dash.dependencies import Input, Output, State
@@ -12,6 +13,8 @@ from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
+from dash_extensions import Download
+from dash_extensions.snippets import send_data_frame
 from sqlalchemy import create_engine
 
 from src import Config
@@ -182,13 +185,13 @@ def get_results_wrapper() -> html.Div:
                 tooltip_delay=0,
             ),
             html.Div(
-                dbc.Button(
-                    'Eksportuj do .csv',
+                [dbc.Button(
+                    'Eksportuj do .tsv',
                     id='button-export',
                     color='info',
                     outline=True,
                     className='mt-2'
-                ),
+                ), Download(id='download')],
                 style={'text-align': 'right'}
             ),
         ],
@@ -392,6 +395,21 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
         ),
         dbc.Table(table_header + table_body, bordered=True),
     ]
+
+
+@app.callback(
+    Output('download', 'data'),
+    Input('button-export', 'n_clicks'),
+    State('results-table', 'data')
+)
+def export_button_click(n_clicks, data):
+    if n_clicks is None:
+        return None
+
+    df = pd.DataFrame(data)
+    df.drop(columns=['PointsHistory', 'Similarity'], inplace=True)
+    df['Points'] = df['Points'].apply(lambda x: x[0])
+    return send_data_frame(df.to_csv, 'df.tsv', sep='\t')
 
 
 if __name__ == "__main__":

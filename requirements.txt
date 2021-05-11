@@ -1,5 +1,6 @@
 dash==1.19.0
 dash_bootstrap_components==0.12.0
+dash-extensions==0.0.18
 tabula-py==2.2.0
 pandas==1.2.4
 PyPDF2==1.26.0

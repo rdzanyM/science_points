@@ -35,15 +35,16 @@ def get_domain_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
             dbc.Label('Dziedziny:', className='lead'),
-            dbc.Checklist(
+            dcc.Dropdown(
                 options=[
-                    {'label': domain, 'value': domain}
+                   {'label': domain, 'value': domain}
                     for domain in domains
                 ],
-                value=['informatyka'],
+                value=['matematyka', 'informatyka'],
+                multi=True,
                 id="domain-input",
-                inline=True
-            ),
+
+            )
         ]
     )
 

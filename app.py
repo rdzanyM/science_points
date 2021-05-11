@@ -54,7 +54,7 @@ def get_domain_form_group() -> dbc.FormGroup:
 def get_publication_type_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
-            dbc.Label('Rodzaj ubikacji:', className='lead'),
+            dbc.Label('Rodzaj publikacji:', className='lead'),
             html.Div(
                 [
                     dbc.RadioItems(

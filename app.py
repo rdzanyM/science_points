@@ -205,12 +205,75 @@ def get_extra_buttons() -> dbc.ButtonGroup:
             color='info',
         ),
         dbc.Button(
-            "Importuj .csv",
+            'Importuj .csv',
             id='button-import',
             color='info',
             outline=True,
         ),
     ])
+
+
+def get_import_modal() -> dbc.Modal:
+    return dbc.Modal(
+        [
+            dbc.ModalHeader('Importuj zapytanie z pliku .csv'),
+            dbc.ModalBody([
+                html.P('Wklej lub prześlij plik .csv z danymi do wyszukania.'),
+                html.Ul([
+                    html.Li('Plik nie powinien zawierać nagłówków.'),
+                    html.Li('Plik powinien zawierać maksymalnie dwie kolumny: szukana nazwa i data. Druga kolumna '
+                            'może zostać pominięta.'),
+                    html.Li('Kolumny mogą być rozdzielone znakami , ; lub tabulatora.'),
+                    html.Li('Jeśli to konieczne, pola mogą być zawarte w cudzysłowach, np.: "nazwa".')
+                ]),
+                dcc.Upload(
+                    html.Div([
+                        'Przeciągnij i upuść lub ',
+                        html.A('wybierz plik', className='text-info', style={'cursor': 'pointer'})
+                    ]),
+                    id='upload-query',
+                    style={
+                        'width': '100%',
+                        'height': '2.5rem',
+                        'lineHeight': '2.5rem',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                    },
+                    className='mb-2',
+                ),
+                dbc.Textarea(
+                    id='textarea-import',
+                    placeholder='Wklej plik .csv',
+                    style={
+                        'height': '12rem',
+                    },
+                    className='text-monospace',
+                )
+            ]),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        'Anuluj',
+                        id='button-cancel-import',
+                        color='danger',
+                        outline=True,
+                        className='mr-2',
+                    ),
+                    dbc.Button(
+                        'Importuj',
+                        id='button-do-import',
+                        color='primary',
+                    ),
+                ],
+                style={'justify-content': 'space-between'}
+            ),
+        ],
+        id='modal-import',
+        centered=True,
+        size='lg',
+    )
 
 
 def get_search_button() -> dbc.Button:
@@ -255,7 +318,7 @@ def get_content_column():
                 row_col([get_domain_form_group()], [12]),
                 row_col([get_search_table()], [12], row_extra_classes='mt-1'),
                 row_col(
-                    [get_extra_buttons()],
+                    [[get_extra_buttons(), get_import_modal()]],
                     [12],
                     [{'text-align': 'right'}],
                     row_extra_classes='mt-2',
@@ -292,6 +355,17 @@ def add_row(n_clicks, rows, columns):
     if n_clicks is not None:
         rows.append({c['id']: '' for c in columns})
     return rows
+
+
+@app.callback(
+    Output('modal-import', 'is_open'),
+    [Input('button-import', 'n_clicks'), Input('button-cancel-import', 'n_clicks')],
+    [State('modal-import', 'is_open')],
+)
+def toggle_modal(n1, n2, is_open: bool) -> bool:
+    if n1 or n2:
+        return not is_open
+    return is_open
 
 
 @app.callback(

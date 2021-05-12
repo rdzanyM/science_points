@@ -3,15 +3,19 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
+import base64
 from functools import partial
+from io import StringIO
 
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
+from dash.exceptions import PreventUpdate
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
+import pandas as pd
 from sqlalchemy import create_engine
 
 from src import Config
@@ -205,12 +209,76 @@ def get_extra_buttons() -> dbc.ButtonGroup:
             color='info',
         ),
         dbc.Button(
-            "Importuj .csv",
+            'Importuj .csv',
             id='button-import',
             color='info',
             outline=True,
         ),
     ])
+
+
+def get_import_modal() -> dbc.Modal:
+    return dbc.Modal(
+        [
+            dbc.ModalHeader('Importuj zapytanie z pliku .csv'),
+            dbc.ModalBody([
+                html.P('Wklej lub prześlij plik .csv z danymi do wyszukania.'),
+                html.Ul([
+                    html.Li('Plik nie powinien zawierać nagłówków.'),
+                    html.Li('Plik powinien zawierać dokładnie dwie kolumny: szukana nazwa i data.'
+                            ' Wartości w drugiej kolumnie mogą zostać pominięte, ale separator musi być obecny.'),
+                    html.Li('Kolumny mogą być rozdzielone znakami , ; lub tabulatora.'),
+                    html.Li('Jeśli to konieczne, pola mogą być zawarte w cudzysłowach, np.: "nazwa".'),
+                    html.Li('Daty powinny być w formacie YYYY lub YYYY-MM-DD.'),
+                ]),
+                dcc.Upload(
+                    html.Div([
+                        'Przeciągnij i upuść lub ',
+                        html.A('wybierz plik', className='text-info', style={'cursor': 'pointer'})
+                    ]),
+                    id='upload-query',
+                    style={
+                        'width': '100%',
+                        'height': '2.5rem',
+                        'lineHeight': '2.5rem',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                    },
+                    className='mb-2',
+                ),
+                dbc.Textarea(
+                    id='textarea-import',
+                    placeholder='Wklej plik .csv',
+                    style={
+                        'height': '12rem',
+                    },
+                    className='text-monospace',
+                )
+            ]),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        'Anuluj',
+                        id='button-cancel-import',
+                        color='danger',
+                        outline=True,
+                        className='mr-2',
+                    ),
+                    dbc.Button(
+                        'Importuj',
+                        id='button-do-import',
+                        color='primary',
+                    ),
+                ],
+                style={'justify-content': 'space-between'}
+            ),
+        ],
+        id='modal-import',
+        centered=True,
+        size='lg',
+    )
 
 
 def get_search_button() -> dbc.Button:
@@ -255,7 +323,7 @@ def get_content_column():
                 row_col([get_domain_form_group()], [12]),
                 row_col([get_search_table()], [12], row_extra_classes='mt-1'),
                 row_col(
-                    [get_extra_buttons()],
+                    [[get_extra_buttons(), get_import_modal()]],
                     [12],
                     [{'text-align': 'right'}],
                     row_extra_classes='mt-2',
@@ -301,15 +369,67 @@ app.layout = html.Div(
 
 
 @app.callback(
+    Output('modal-import', 'is_open'),
+    [
+        Input('button-import', 'n_clicks'),
+        Input('button-cancel-import', 'n_clicks'),
+        Input('button-do-import', 'n_clicks'),
+    ],
+    [State('modal-import', 'is_open')],
+)
+def toggle_modal(n1, n2, n3, is_open: bool) -> bool:
+    if n1 or n2 or n3:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output('textarea-import', 'value'),
+    Input('upload-query', 'contents'),
+)
+def upload_file(content):
+    if content is None or len(content) == 0:
+        raise PreventUpdate
+
+    try:
+        _, text = content.split(',')
+        return base64.b64decode(text).decode()
+    except Exception:
+        raise PreventUpdate
+
+
+@app.callback(
     Output('search-table', 'data'),
     Input('button-add-row', 'n_clicks'),
+    Input('button-do-import', 'n_clicks'),
     State('search-table', 'data'),
-    State('search-table', 'columns')
+    State('search-table', 'columns'),
+    State('textarea-import', 'value'),
 )
-def add_row(n_clicks, rows, columns):
-    if n_clicks is not None:
-        rows.append({c['id']: '' for c in columns})
-    return rows
+def update_search_table(add_row_clicks, import_clicks, data, columns, import_text):
+    if add_row_clicks is not None:
+        data.append({c['id']: '' for c in columns})
+        return data
+
+    if not import_clicks or not import_text:
+        return data
+
+    try:
+        df = pd.read_csv(
+            StringIO(import_text),
+            names=('Title', 'Date'),
+            parse_dates=False,
+            quotechar='"',
+            sep=None,
+            dtype='str',
+            skip_blank_lines=True,
+            engine='python',
+        ).fillna('')
+    except Exception:
+        # This should properly report the error, but meh, we can leave without it
+        raise PreventUpdate
+
+    return df.to_dict('records')
 
 
 @app.callback(

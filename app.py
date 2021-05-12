@@ -3,15 +3,19 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
+import base64
 from functools import partial
+from io import StringIO
 
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
+from dash.exceptions import PreventUpdate
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
+import pandas as pd
 from sqlalchemy import create_engine
 
 from src import Config
@@ -221,10 +225,11 @@ def get_import_modal() -> dbc.Modal:
                 html.P('Wklej lub prześlij plik .csv z danymi do wyszukania.'),
                 html.Ul([
                     html.Li('Plik nie powinien zawierać nagłówków.'),
-                    html.Li('Plik powinien zawierać maksymalnie dwie kolumny: szukana nazwa i data. Druga kolumna '
-                            'może zostać pominięta.'),
+                    html.Li('Plik powinien zawierać dokładnie dwie kolumny: szukana nazwa i data.'
+                            ' Wartości w drugiej kolumnie mogą zostać pominięte, ale separator musi być obecny.'),
                     html.Li('Kolumny mogą być rozdzielone znakami , ; lub tabulatora.'),
-                    html.Li('Jeśli to konieczne, pola mogą być zawarte w cudzysłowach, np.: "nazwa".')
+                    html.Li('Jeśli to konieczne, pola mogą być zawarte w cudzysłowach, np.: "nazwa".'),
+                    html.Li('Daty powinny być w formacie YYYY lub YYYY-MM-DD.'),
                 ]),
                 dcc.Upload(
                     html.Div([
@@ -346,26 +351,67 @@ app.layout = html.Div(
 
 
 @app.callback(
-    Output('search-table', 'data'),
-    Input('button-add-row', 'n_clicks'),
-    State('search-table', 'data'),
-    State('search-table', 'columns')
+    Output('modal-import', 'is_open'),
+    [
+        Input('button-import', 'n_clicks'),
+        Input('button-cancel-import', 'n_clicks'),
+        Input('button-do-import', 'n_clicks'),
+    ],
+    [State('modal-import', 'is_open')],
 )
-def add_row(n_clicks, rows, columns):
-    if n_clicks is not None:
-        rows.append({c['id']: '' for c in columns})
-    return rows
+def toggle_modal(n1, n2, n3, is_open: bool) -> bool:
+    if n1 or n2 or n3:
+        return not is_open
+    return is_open
 
 
 @app.callback(
-    Output('modal-import', 'is_open'),
-    [Input('button-import', 'n_clicks'), Input('button-cancel-import', 'n_clicks')],
-    [State('modal-import', 'is_open')],
+    Output('textarea-import', 'value'),
+    Input('upload-query', 'contents'),
 )
-def toggle_modal(n1, n2, is_open: bool) -> bool:
-    if n1 or n2:
-        return not is_open
-    return is_open
+def upload_file(content):
+    if content is None or len(content) == 0:
+        raise PreventUpdate
+
+    try:
+        _, text = content.split(',')
+        return base64.b64decode(text).decode()
+    except Exception:
+        raise PreventUpdate
+
+
+@app.callback(
+    Output('search-table', 'data'),
+    Input('button-add-row', 'n_clicks'),
+    Input('button-do-import', 'n_clicks'),
+    State('search-table', 'data'),
+    State('search-table', 'columns'),
+    State('textarea-import', 'value'),
+)
+def update_search_table(add_row_clicks, import_clicks, data, columns, import_text):
+    if add_row_clicks is not None:
+        data.append({c['id']: '' for c in columns})
+        return data
+
+    if not import_clicks or not import_text:
+        return data
+
+    try:
+        df = pd.read_csv(
+            StringIO(import_text),
+            names=('Title', 'Date'),
+            parse_dates=False,
+            quotechar='"',
+            sep=None,
+            dtype='str',
+            skip_blank_lines=True,
+            engine='python',
+        ).fillna('')
+    except Exception:
+        # This should properly report the error, but meh, we can leave without it
+        raise PreventUpdate
+
+    return df.to_dict('records')
 
 
 @app.callback(

@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+dash = "==1.19.0"
+dash-bootstrap-components = "==0.12.0"
+dash-core-components = "==1.15.0"
+dash-html-components = "==1.1.2"
+dash-renderer = "==1.9.0"
+dash-table = "==4.11.2"
+tabula-py = "==2.2.0"
+pandas = "==1.2.4"
+PyPDF2 = "==1.26.0"
+PyYAML = "==5.4.1"
+urllib3 = "==1.25.8"
+sklearn = "*"
+SQLAlchemy = "==1.4.6"
+openpyxl = "==3.0.5"
+Whoosh = "==2.7.4"
+jellyfish = "==0.8.2"
+colorlover = "==0.3.0"
+gunicorn = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

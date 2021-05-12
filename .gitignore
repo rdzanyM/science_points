@@ -1,3 +1,8 @@
+venv
+*.pyc
+.DS_Store
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -134,4 +139,4 @@ dmypy.json
 /data/*.pdf
 
 # The database and the text index
-db/
+# db/

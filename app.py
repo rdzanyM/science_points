@@ -37,7 +37,7 @@ def get_domain_form_group() -> dbc.FormGroup:
             dbc.Label('Dziedziny:', className='lead'),
             dcc.Dropdown(
                 options=[
-                   {'label': domain, 'value': domain}
+                    {'label': domain, 'value': domain}
                     for domain in domains
                 ],
                 value=['matematyka', 'informatyka'],

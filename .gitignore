@@ -139,4 +139,4 @@ dmypy.json
 /data/*.pdf
 
 # The database and the text index
-# db/
+db/

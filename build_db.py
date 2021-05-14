@@ -52,6 +52,7 @@ def conference_to_db(engine, config: Config):
     titles['id'] = titles.index
     dates = titles.join(conferences.set_index('title'), on='title', how='outer')[['id', 'government_statement_id', 'points']]
     dates.columns = ['conference_id', 'government_statement_id', 'points']
+    dates = dates.sort_values('points').drop_duplicates(subset=['conference_id', 'government_statement_id'], keep='last')
     titles.to_sql(name='Conferences', con=engine, if_exists='append', index=False, index_label='id')
     dates.drop_duplicates(inplace=True)
     dates.to_sql(name='ConferenceDatePoints', con=engine, if_exists='append', index=False, index_label=None)
@@ -95,6 +96,7 @@ def journal_to_db(engine, config: Config):
     joined = titles.join(journals.set_index('Tytuł 1'), on='title', how='outer')
     dates = joined[['id', 'government_statement_id', 'points']]
     dates.columns = ['journal_id', 'government_statement_id', 'points']
+    dates = dates.sort_values('points').drop_duplicates(subset=['journal_id', 'government_statement_id'], keep='last')
     titles.to_sql(name='Journals', con=engine, if_exists='append', index=False, index_label='id')
     # drop duplicates
     dates = dates.groupby(['journal_id', 'government_statement_id'])['points'].max().reset_index()

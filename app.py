@@ -52,7 +52,7 @@ def get_domain_form_group() -> dbc.FormGroup:
 
             )
         ]
-    )
+    , id='domain-form-group')
 
 
 def get_publication_type_form_group() -> dbc.FormGroup:
@@ -500,6 +500,16 @@ def search(n_clicks, domains, publication_type, search_table_data):
             })
 
     return data, tooltip_data
+
+
+@app.callback(
+    Output('domain-form-group', 'style'),
+    Input('publication-type-input', 'value'),
+)
+def hide_domains_for_monographs(publication_type):
+    if publication_type == 'monografie':
+        return {'display':  'none'}
+    return {'display': 'block'}
 
 
 @app.callback(

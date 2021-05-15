@@ -10,6 +10,7 @@ from whoosh.filedb.filestore import FileStorage
 from whoosh.index import Index
 from whoosh.qparser import QueryParser, OrGroup
 
+from timer import timer, timer_ctx
 from .. import Config
 from .schema import *
 from .. import orm
@@ -20,6 +21,7 @@ class IndexBuilder:
         self.index_dir = config['search']['index_path']
         self.session = session
 
+    @timer
     def build_index(self):
         """
         Recreates and builds the text index for all types of entries.
@@ -63,6 +65,7 @@ class IndexBuilder:
             self.session.query(orm.Conferences)
         ))
 
+    @timer
     def __create_index(self, i_type: str):
         index_dir = os.path.join(self.index_dir, i_type)
         os.makedirs(index_dir, exist_ok=True)
@@ -70,6 +73,7 @@ class IndexBuilder:
         return storage.create_index(schema)
 
     @staticmethod
+    @timer
     def __add_documents(index: Index, docs: Iterable[dict]):
         writer = index.writer()
         written = 0
@@ -99,6 +103,7 @@ class IndexReader:
         self.matching_domains_boost = config['search']['matching_domains_boost']
         self.name_parser = QueryParser('name', schema, plugins=[], group=OrGroup)
 
+    @timer
     def query_monographs(self, text: str) -> Tuple[float, pd.DataFrame]:
         """
         :param text: publisher name to search for
@@ -106,6 +111,7 @@ class IndexReader:
         """
         return self.__query(self.index_m, text, set())
 
+    @timer
     def query_journals(self, text: str, domains: [str]) -> Tuple[float, pd.DataFrame]:
         """
         :param text: journal name to search for
@@ -115,6 +121,7 @@ class IndexReader:
         """
         return self.__query(self.index_j, text, set(domains))
 
+    @timer
     def query_conferences(self, text: str) -> Tuple[float, pd.DataFrame]:
         """
         :param text: conference name to search for
@@ -122,31 +129,36 @@ class IndexReader:
         """
         return self.__query(self.index_c, text, set())
 
+    @timer
     def __query(self, index: Index, text: str, domains: Set[str]) -> Tuple[float, pd.DataFrame]:
-        q = self.name_parser.parse(text)
+        with timer_ctx('part1'):
+            q = self.name_parser.parse(text)
 
-        with index.searcher() as s:
-            results = []
-            for hit in s.search(q, limit=20):
-                ds = set((hit.get('domains') or '').split(','))
-                results.append({
-                    'score': hit.score,
-                    'id': hit['id'],
-                    'name': hit['name'],
-                    'domains_boost': self.matching_domains_boost if len(ds & domains) > 0 else 1
-                })
+        with timer_ctx('part2'):
+            with index.searcher() as s:
+                results = []
+                for hit in s.search(q, limit=5):
+                    ds = set((hit.get('domains') or '').split(','))
+                    results.append({
+                        'score': hit.score,
+                        'id': hit['id'],
+                        'name': hit['name'],
+                        'domains_boost': self.matching_domains_boost if len(ds & domains) > 0 else 1
+                    })
 
-        if len(results) == 0:
-            return 0, pd.DataFrame()
+        with timer_ctx('part3'):
+            if len(results) == 0:
+                return 0, pd.DataFrame()
 
-        df = pd.DataFrame.from_records(results, index='id')
-        df['score'] = df['score'] * df['domains_boost']
-        df = df.sort_values(by='score', ascending=False).iloc[:5]
+            df = pd.DataFrame.from_records(results, index='id')
+            df['score'] = df['score'] * df['domains_boost']
+            df = df.sort_values(by='score', ascending=False).iloc[:5]
 
-        # Rescale the results
-        df['score'] = df['score'] / df['score'].max()
+            # Rescale the results
+            df['score'] = df['score'] / df['score'].max()
 
-        # Compute absolute similarity, but first lowercase both strings
-        sim = jellyfish.jaro_winkler_similarity(df.iloc[0]['name'].lower(), text.lower())
+        with timer_ctx('part4'):
+            # Compute absolute similarity, but first lowercase both strings
+            sim = jellyfish.jaro_winkler_similarity(df.iloc[0]['name'].lower(), text.lower())
 
         return sim, df

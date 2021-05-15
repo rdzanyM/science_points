@@ -28,6 +28,7 @@ from src.app_utils import (
     row_col,
 )
 from src.orm import Cursor
+from timer import timer
 
 config = Config()
 ir = IndexReader(config)
@@ -353,6 +354,11 @@ def get_footer() -> html.Footer:
     )
 
 
+def get_interval_timer(interval=5_000):
+    return html.Div(dcc.Interval(id='interval_timer', interval=interval, n_intervals=0),
+                    id='interval_div')
+
+
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.FLATLY],
@@ -366,6 +372,7 @@ app.layout = html.Div(
             className='row',
         ),
         get_footer(),
+        get_interval_timer(),
     ],
     className='container-fluid',
 )
@@ -443,6 +450,7 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
     Input('publication-type-input', 'value'),
     State('search-table', 'data'),
 )
+@timer
 def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
         return None, None
@@ -500,6 +508,15 @@ def search(n_clicks, domains, publication_type, search_table_data):
             })
 
     return data, tooltip_data
+
+
+@app.callback(
+    Output('interval_div', 'value'),
+    Input('interval_timer', 'n_intervals'),
+)
+def print_timer(_):
+    print(f"Time spent in each function so far: {dict(timer.counter)}")
+    return 0
 
 
 @app.callback(

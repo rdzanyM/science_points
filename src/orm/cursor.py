@@ -65,4 +65,4 @@ class Cursor:
         return result
 
     def get_domains(self) -> List[str]:
-        return [d.name for d in self.session.query(Domains.name)]
+        return [d.name for d in self.session.query(Domains.name).order_by(Domains.name)]

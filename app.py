@@ -3,15 +3,21 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
+import base64
 from functools import partial
+from io import StringIO
 
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
+from dash.exceptions import PreventUpdate
 from dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
+import pandas as pd
+from dash_extensions import Download
+from dash_extensions.snippets import send_data_frame
 from sqlalchemy import create_engine
 
 from src import Config
@@ -35,20 +41,18 @@ def get_domain_form_group() -> dbc.FormGroup:
     return dbc.FormGroup(
         [
             dbc.Label('Dziedziny:', className='lead'),
-            dbc.Checklist(
+            dcc.Dropdown(
                 options=[
-                    # The full list looks horrible, let's leave it out for now
                     {'label': domain, 'value': domain}
                     for domain in domains
-                    # {"label": "matematyka", "value": 'matematyka'},
-                    # {"label": "informatyka", "value": 'informatyka'},
                 ],
-                value=['informatyka'],
+                value=['matematyka', 'informatyka'],
+                multi=True,
                 id="domain-input",
-                inline=True
-            ),
+
+            )
         ]
-    )
+    , id='domain-form-group')
 
 
 def get_publication_type_form_group() -> dbc.FormGroup:
@@ -149,7 +153,7 @@ def get_results_wrapper() -> html.Div:
                     {'id': 'Similarity',
                      'name': 'Dopasowanie',
                      'type': 'numeric',
-                     'format': Format(precision=1, scheme=Scheme.percentage)
+                     'format': Format(precision=0, scheme=Scheme.percentage)
                      }
                 ],
                 style_cell={
@@ -185,13 +189,13 @@ def get_results_wrapper() -> html.Div:
                 tooltip_delay=0,
             ),
             html.Div(
-                dbc.Button(
-                    'Eksportuj do .csv',
+                [dbc.Button(
+                    'Eksportuj do .tsv',
                     id='button-export',
                     color='info',
                     outline=True,
                     className='mt-2'
-                ),
+                ), Download(id='download')],
                 style={'text-align': 'right'}
             ),
         ],
@@ -207,12 +211,76 @@ def get_extra_buttons() -> dbc.ButtonGroup:
             color='info',
         ),
         dbc.Button(
-            "Importuj .csv",
+            'Importuj .csv',
             id='button-import',
             color='info',
             outline=True,
         ),
     ])
+
+
+def get_import_modal() -> dbc.Modal:
+    return dbc.Modal(
+        [
+            dbc.ModalHeader('Importuj zapytanie z pliku .csv'),
+            dbc.ModalBody([
+                html.P('Wklej lub prześlij plik .csv z danymi do wyszukania.'),
+                html.Ul([
+                    html.Li('Plik nie powinien zawierać nagłówków.'),
+                    html.Li('Plik powinien zawierać dokładnie dwie kolumny: szukana nazwa i data.'
+                            ' Wartości w drugiej kolumnie mogą zostać pominięte, ale separator musi być obecny.'),
+                    html.Li('Kolumny mogą być rozdzielone znakami , ; lub tabulatora.'),
+                    html.Li('Jeśli to konieczne, pola mogą być zawarte w cudzysłowach, np.: "nazwa".'),
+                    html.Li('Daty powinny być w formacie YYYY lub YYYY-MM-DD.'),
+                ]),
+                dcc.Upload(
+                    html.Div([
+                        'Przeciągnij i upuść lub ',
+                        html.A('wybierz plik', className='text-info', style={'cursor': 'pointer'})
+                    ]),
+                    id='upload-query',
+                    style={
+                        'width': '100%',
+                        'height': '2.5rem',
+                        'lineHeight': '2.5rem',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                    },
+                    className='mb-2',
+                ),
+                dbc.Textarea(
+                    id='textarea-import',
+                    placeholder='Wklej plik .csv',
+                    style={
+                        'height': '12rem',
+                    },
+                    className='text-monospace',
+                )
+            ]),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        'Anuluj',
+                        id='button-cancel-import',
+                        color='danger',
+                        outline=True,
+                        className='mr-2',
+                    ),
+                    dbc.Button(
+                        'Importuj',
+                        id='button-do-import',
+                        color='primary',
+                    ),
+                ],
+                style={'justify-content': 'space-between'}
+            ),
+        ],
+        id='modal-import',
+        centered=True,
+        size='lg',
+    )
 
 
 def get_search_button() -> dbc.Button:
@@ -241,7 +309,6 @@ def get_sidebar():
         className='bg-light col-3',
         style={
             'padding': '2rem 1rem',
-            'height': '100vh',
         },
         id='sidebar'
     )
@@ -249,6 +316,7 @@ def get_sidebar():
 
 def get_content_column():
     return html.Div(
+        id='content-column',
         className='col-9',
         children=html.Div(
             className='container',
@@ -257,43 +325,114 @@ def get_content_column():
                 row_col([get_domain_form_group()], [12]),
                 row_col([get_search_table()], [12], row_extra_classes='mt-1'),
                 row_col(
-                    [get_extra_buttons()],
+                    [[get_extra_buttons(), get_import_modal()]],
                     [12],
                     [{'text-align': 'right'}],
                     row_extra_classes='mt-2',
                 ),
                 row_col([get_search_button()], [12], row_extra_classes='mt-3'),
                 row_col([get_results_wrapper()], [12], row_extra_classes='mt-5'),
+                row_col([], [], row_extra_classes='content-spacer'),
             ],
         ),
     )
 
 
+
+def get_footer() -> html.Footer:
+    return html.Footer(
+        [
+            html.P('Józef Jasek, Michał Rdzany, Michał Sokólski, Piotr Sowiński – MINI PW 2021'),
+            html.P(html.A(
+                'Zobacz kod na GitHubie.',
+                href='https://github.com/rdzanyM/science_points',
+            ))
+        ],
+        id='footer',
+        className='text-primary',
+    )
+
+
 app = dash.Dash(
+    __name__,
     external_stylesheets=[dbc.themes.FLATLY],
     title='Punkty ministerialne',
     update_title='⌛ Punkty ministerialne',
 )
-
 app.layout = html.Div(
-    html.Div(
-        [get_sidebar(), get_content_column()],
-        className='row',
-    ),
+    children=[
+        html.Div(
+            [get_sidebar(), get_content_column()],
+            className='row',
+        ),
+        get_footer(),
+    ],
     className='container-fluid',
 )
 
 
 @app.callback(
+    Output('modal-import', 'is_open'),
+    [
+        Input('button-import', 'n_clicks'),
+        Input('button-cancel-import', 'n_clicks'),
+        Input('button-do-import', 'n_clicks'),
+    ],
+    [State('modal-import', 'is_open')],
+)
+def toggle_modal(n1, n2, n3, is_open: bool) -> bool:
+    if n1 or n2 or n3:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output('textarea-import', 'value'),
+    Input('upload-query', 'contents'),
+)
+def upload_file(content):
+    if content is None or len(content) == 0:
+        raise PreventUpdate
+
+    try:
+        _, text = content.split(',')
+        return base64.b64decode(text).decode()
+    except Exception:
+        raise PreventUpdate
+
+
+@app.callback(
     Output('search-table', 'data'),
     Input('button-add-row', 'n_clicks'),
+    Input('button-do-import', 'n_clicks'),
     State('search-table', 'data'),
-    State('search-table', 'columns')
+    State('search-table', 'columns'),
+    State('textarea-import', 'value'),
 )
-def add_row(n_clicks, rows, columns):
-    if n_clicks is not None:
-        rows.append({c['id']: '' for c in columns})
-    return rows
+def update_search_table(add_row_clicks, import_clicks, data, columns, import_text):
+    if add_row_clicks is not None:
+        data.append({c['id']: '' for c in columns})
+        return data
+
+    if not import_clicks or not import_text:
+        return data
+
+    try:
+        df = pd.read_csv(
+            StringIO(import_text),
+            names=('Title', 'Date'),
+            parse_dates=False,
+            quotechar='"',
+            sep=None,
+            dtype='str',
+            skip_blank_lines=True,
+            engine='python',
+        ).fillna('')
+    except Exception:
+        # This should properly report the error, but meh, we can leave without it
+        raise PreventUpdate
+
+    return df.to_dict('records')
 
 
 @app.callback(
@@ -347,7 +486,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Date': row["Date"],
                 'Points': [points_for_selected_date],
                 'PointsHistory': date_points,
-                'Similarity': sim
+                'Similarity': round(float(sim), 2)
             })
 
             tooltip_data.append({
@@ -361,6 +500,16 @@ def search(n_clicks, domains, publication_type, search_table_data):
             })
 
     return data, tooltip_data
+
+
+@app.callback(
+    Output('domain-form-group', 'style'),
+    Input('publication-type-input', 'value'),
+)
+def hide_domains_for_monographs(publication_type):
+    if publication_type == 'monografie':
+        return {'display':  'none'}
+    return {'display': 'block'}
 
 
 @app.callback(
@@ -395,6 +544,21 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
         ),
         dbc.Table(table_header + table_body, bordered=True),
     ]
+server = app.server
+
+@app.callback(
+    Output('download', 'data'),
+    Input('button-export', 'n_clicks'),
+    State('results-table', 'data')
+)
+def export_button_click(n_clicks, data):
+    if n_clicks is None:
+        return None
+
+    df = pd.DataFrame(data)
+    df.drop(columns=['PointsHistory', 'Similarity'], inplace=True)
+    df['Points'] = df['Points'].apply(lambda x: x[0])
+    return send_data_frame(df.to_csv, 'df.tsv', sep='\t')
 
 
 if __name__ == "__main__":

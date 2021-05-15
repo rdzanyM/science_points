@@ -139,9 +139,10 @@ def get_search_table() -> html.Div:
 
 
 def get_results_wrapper() -> html.Div:
-    wrapper = dcc.Loading(
-        id='loading-results',
-        color='var(--primary)',
+
+    wrapper_content = html.Div(
+        id='wrapper-content',
+        style={'display': 'none'},
         children=[
             html.H4('Wyniki wyszukiwania'),
             dash_table.DataTable(
@@ -199,6 +200,13 @@ def get_results_wrapper() -> html.Div:
                 style={'text-align': 'right'}
             ),
         ],
+    )
+
+    wrapper = dcc.Loading(
+        id='loading-results',
+        color='var(--primary)',
+        style={'display': 'none'},
+        children=wrapper_content
     )
     return wrapper
 
@@ -511,6 +519,15 @@ def hide_domains_for_monographs(publication_type):
         return {'display':  'none'}
     return {'display': 'block'}
 
+@app.callback(
+    Output('loading-results', 'style'),
+    Output('wrapper-content', 'style'),
+    Input('button-search', 'n_clicks'),
+)
+def hide_results_table_before_search_click(n_clicks):
+    if n_clicks is None:
+        return {'display': 'none'}, {'display': 'none'}
+    return {'display': 'block'}, {'display': 'block'}
 
 @app.callback(
     Output('sidebar-content', 'children'),

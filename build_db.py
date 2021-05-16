@@ -56,7 +56,10 @@ def conference_to_db(engine, config: Config):
     titles.to_sql(name='Conferences', con=engine, if_exists='append', index=False, index_label='id')
     dates.drop_duplicates(inplace=True)
     dates.to_sql(name='ConferenceDatePoints', con=engine, if_exists='append', index=False, index_label=None)
-
+    c_domains = pd.DataFrame(columns=['conference_id', 'domain_id'])
+    c_domains['conference_id'] = np.tile(titles['id'], 2)
+    c_domains['domain_id'] = np.repeat([9,37], len(titles['id']))
+    c_domains.to_sql(name='ConferenceDomains', con=engine, if_exists='append', index=False, index_label=None)
 
 def journal_to_db(engine, config: Config):
     journals = None
@@ -124,8 +127,8 @@ if __name__ == '__main__':
 
     os.makedirs(config['data_path'], exist_ok=True)
     monograph_to_db(engine, config)
-    conference_to_db(engine, config)
     journal_to_db(engine, config)
+    conference_to_db(engine, config)
 
     # Build the text index
     Session = sessionmaker(bind=engine)

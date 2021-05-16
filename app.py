@@ -307,10 +307,7 @@ def get_sidebar():
             )
         ],
         className='bg-light col-3',
-        style={
-            'padding': '2rem 1rem',
-        },
-        id='sidebar'
+        id='sidebar',
     )
 
 

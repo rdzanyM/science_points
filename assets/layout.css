@@ -4,6 +4,13 @@
     overflow-x: hidden; /* Avoid layout jitter when opening popups */
 }
 
+#sidebar {
+    padding: 2rem 1rem;
+    height: calc(100vh - 3rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 #footer {
     width: 100%;
     height: 3rem;

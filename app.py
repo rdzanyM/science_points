@@ -315,10 +315,7 @@ def get_sidebar():
             )
         ],
         className='bg-light col-3',
-        style={
-            'padding': '2rem 1rem',
-        },
-        id='sidebar'
+        id='sidebar',
     )
 
 
@@ -532,10 +529,11 @@ def hide_results_table_before_search_click(n_clicks):
 @app.callback(
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
+    State('publication-type-input', 'value'),
     State('results-table', 'data'),
     State('sidebar-content', 'children')
 )
-def update_sidebar_on_row_click(selected_cells, data, current_children):
+def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
 
@@ -552,6 +550,13 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
 
     table_body = [html.Tbody(past_points)]
 
+    domains = []
+    with Cursor(engine) as cursor:
+        if publication_type == 'czasopisma':
+            domains = cursor.get_journal_domains(selected_row['Title'])
+        elif publication_type == 'konferencje':
+            domains = cursor.get_conference_domains(selected_row['Title'])
+
     return [
         html.H5(
             selected_row['Title'],
@@ -560,8 +565,16 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
             'Wartości punktowe w czasie:'
         ),
         dbc.Table(table_header + table_body, bordered=True),
+        html.P(
+            'Przypisane dziedziny:'
+        ),
+        html.Ul(
+            id='domain-list',
+            children=[html.Li(i) for i in domains],
+            style={'margin-top': '-0.8rem'},
+        ),
     ]
-server = app.server
+
 
 @app.callback(
     Output('download', 'data'),

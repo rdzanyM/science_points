@@ -1,3 +1,5 @@
+from src.orm.conferences import ConferenceDomains
+from src.orm.journals import JournalDomains
 from typing import List
 
 from sqlalchemy import create_engine
@@ -66,3 +68,18 @@ class Cursor:
 
     def get_domains(self) -> List[str]:
         return [d.name for d in self.session.query(Domains.name).order_by(Domains.name)]
+
+    def get_journal_domains(self, title):
+        domains = self.session.query(Domains) \
+            .join(JournalDomains) \
+            .join(Journals) \
+            .where(Journals.title == title).all()
+        return [d.name for d in domains]
+
+    def get_conference_domains(self, title):
+        domains = self.session.query(Domains) \
+            .join(ConferenceDomains) \
+            .join(Conferences) \
+            .where(Conferences.title == title).all()
+        return [d.name for d in domains]
+

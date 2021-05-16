@@ -571,7 +571,6 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
         html.Ul(
             id='domain-list',
             children=[html.Li(i) for i in domains],
-            style={'margin-top': '-0.8rem'},
         ),
     ]
 

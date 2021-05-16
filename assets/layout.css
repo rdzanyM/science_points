@@ -47,7 +47,7 @@
     height: 3rem;
 }
 
-/* Adjust paragraph spacing in tooltips */
-.dash-tooltip p+ol {
-    margin-top: -0.8rem;
+/* Adjust paragraph + list spacing */
+p+ol, p+ul {
+    margin-top: -0.8rem !important;
 }

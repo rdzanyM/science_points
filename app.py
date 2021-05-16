@@ -554,9 +554,13 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
         html.P(
             'Przypisane dziedziny:'
         ),
-        html.Ul(id='domain-list', children=[html.Li(i) for i in domains], style={'margin-top': -10})
+        html.Ul(
+            id='domain-list',
+            children=[html.Li(i) for i in domains],
+            style={'margin-top': '-0.8rem'},
+        ),
     ]
-server = app.server
+
 
 @app.callback(
     Output('download', 'data'),

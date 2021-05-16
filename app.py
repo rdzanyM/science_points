@@ -16,6 +16,8 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
+from dash_extensions import Download
+from dash_extensions.snippets import send_data_frame
 from sqlalchemy import create_engine
 
 from src import Config
@@ -50,7 +52,7 @@ def get_domain_form_group() -> dbc.FormGroup:
 
             )
         ]
-    )
+    , id='domain-form-group')
 
 
 def get_publication_type_form_group() -> dbc.FormGroup:
@@ -137,9 +139,10 @@ def get_search_table() -> html.Div:
 
 
 def get_results_wrapper() -> html.Div:
-    wrapper = dcc.Loading(
-        id='loading-results',
-        color='var(--primary)',
+
+    wrapper_content = html.Div(
+        id='wrapper-content',
+        style={'display': 'none'},
         children=[
             html.H4('Wyniki wyszukiwania'),
             dash_table.DataTable(
@@ -187,16 +190,23 @@ def get_results_wrapper() -> html.Div:
                 tooltip_delay=0,
             ),
             html.Div(
-                dbc.Button(
-                    'Eksportuj do .csv',
+                [dbc.Button(
+                    'Eksportuj do .tsv',
                     id='button-export',
                     color='info',
                     outline=True,
                     className='mt-2'
-                ),
+                ), Download(id='download')],
                 style={'text-align': 'right'}
             ),
         ],
+    )
+
+    wrapper = dcc.Loading(
+        id='loading-results',
+        color='var(--primary)',
+        style={'display': 'none'},
+        children=wrapper_content
     )
     return wrapper
 
@@ -305,10 +315,7 @@ def get_sidebar():
             )
         ],
         className='bg-light col-3',
-        style={
-            'padding': '2rem 1rem',
-        },
-        id='sidebar'
+        id='sidebar',
     )
 
 
@@ -501,12 +508,32 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
 
 @app.callback(
+    Output('domain-form-group', 'style'),
+    Input('publication-type-input', 'value'),
+)
+def hide_domains_for_monographs(publication_type):
+    if publication_type == 'monografie':
+        return {'display':  'none'}
+    return {'display': 'block'}
+
+@app.callback(
+    Output('loading-results', 'style'),
+    Output('wrapper-content', 'style'),
+    Input('button-search', 'n_clicks'),
+)
+def hide_results_table_before_search_click(n_clicks):
+    if n_clicks is None:
+        return {'display': 'none'}, {'display': 'none'}
+    return {'display': 'block'}, {'display': 'block'}
+
+@app.callback(
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
+    State('publication-type-input', 'value'),
     State('results-table', 'data'),
     State('sidebar-content', 'children')
 )
-def update_sidebar_on_row_click(selected_cells, data, current_children):
+def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
 
@@ -523,6 +550,13 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
 
     table_body = [html.Tbody(past_points)]
 
+    domains = []
+    with Cursor(engine) as cursor:
+        if publication_type == 'czasopisma':
+            domains = cursor.get_journal_domains(selected_row['Title'])
+        elif publication_type == 'konferencje':
+            domains = cursor.get_conference_domains(selected_row['Title'])
+
     return [
         html.H5(
             selected_row['Title'],
@@ -531,8 +565,30 @@ def update_sidebar_on_row_click(selected_cells, data, current_children):
             'Wartości punktowe w czasie:'
         ),
         dbc.Table(table_header + table_body, bordered=True),
+        html.P(
+            'Przypisane dziedziny:'
+        ),
+        html.Ul(
+            id='domain-list',
+            children=[html.Li(i) for i in domains],
+        ),
     ]
-server = app.server
+
+
+@app.callback(
+    Output('download', 'data'),
+    Input('button-export', 'n_clicks'),
+    State('results-table', 'data')
+)
+def export_button_click(n_clicks, data):
+    if n_clicks is None:
+        return None
+
+    df = pd.DataFrame(data)
+    df.drop(columns=['PointsHistory', 'Similarity'], inplace=True)
+    df['Points'] = df['Points'].apply(lambda x: x[0])
+    return send_data_frame(df.to_csv, 'df.tsv', sep='\t')
+
 
 if __name__ == "__main__":
     app.run_server()

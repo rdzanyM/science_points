@@ -590,5 +590,9 @@ def export_button_click(n_clicks, data):
     return send_data_frame(df.to_csv, 'df.tsv', sep='\t')
 
 
+# Needed for deployment
+server = app.server
+
+
 if __name__ == "__main__":
     app.run_server()

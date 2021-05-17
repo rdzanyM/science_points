@@ -145,6 +145,8 @@ def get_results_wrapper() -> html.Div:
         style={'display': 'none'},
         children=[
             html.H4('Wyniki wyszukiwania'),
+            html.P('Szukane rodzaje publikacji: ', id='searched-publication-type'),
+            html.P('Szukane dziedziny: ', id='searched-domains'),
             dash_table.DataTable(
                 id='results-table',
                 columns=[
@@ -443,6 +445,8 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
 @app.callback(
     Output('results-table', 'data'),
     Output('results-table', 'tooltip_data'),
+    Output('searched-publication-type', 'children'),
+    Output('searched-domains', 'children'),
     Input('button-search', 'n_clicks'),
     State('domain-input', 'value'),
     State('publication-type-input', 'value'),
@@ -450,7 +454,7 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
 )
 def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
-        return None, None
+        return None, None, None, None
 
     with Cursor(engine) as db_cursor:
         if publication_type == 'czasopisma':
@@ -503,8 +507,12 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
+    searched_types = ['Szukane rodzaje publikacji: ', publication_type]
+    searched_domains = [', '+d for d in domains]
+    searched_domains[0] = ':' + searched_domains[0][1:]
+    searched_domains = ['Szukane dziedziny'] + searched_domains
 
-    return data, tooltip_data
+    return data, tooltip_data, searched_types, searched_domains
 
 
 @app.callback(
@@ -529,13 +537,16 @@ def hide_results_table_before_search_click(n_clicks):
 @app.callback(
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
-    State('publication-type-input', 'value'),
+    #State('publication-type-input', 'value'),
+    State('searched-publication-type', 'children'),
     State('results-table', 'data'),
     State('sidebar-content', 'children')
 )
 def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
+
+    publication_type = publication_type[1]
 
     selected_row = data[selected_cells[0]['row']]
 

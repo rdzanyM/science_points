@@ -37,16 +37,17 @@ def conference_to_db(engine, config: Config):
     government_statements['starting_date'] = pd.to_datetime(gov['date'])
     government_statements.to_sql(name='GovernmentStatements', con=engine, if_exists='append', index=False, index_label='id')
     for filename in os.listdir(data_path):
-        c = pd.read_excel(os.path.join(data_path, filename), 1, header=0)
-        c = c.iloc[:, 1:3]
-        c.columns = ['title', 'points']
-        c['title'] = c['title'].str.extract(
-            '((^[^\[]*$)|(.*(?=\s\[)))')  # remove more additional data in titles (present in 2021 data)
-        c['title'] = c['title'].str.extract(
-            '((^.*[^\)\s]\s*$)|(.*(?=\([^\)]*\)\s?$)))')  # remove additional data in titles
-        c['title'] = c['title'].str.extract('(.*[^\s](?=\s*$))')  # remove trailing spaces
-        c['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
-        conferences = conferences.append(c)
+        if int(filename[-9:-5]) > 2017:
+            c = pd.read_excel(os.path.join(data_path, filename), 1, header=0)
+            c = c.iloc[:, 1:3]
+            c.columns = ['title', 'points']
+            c['title'] = c['title'].str.extract(
+                '((^[^\[]*$)|(.*(?=\s\[)))')  # remove more additional data in titles (present in 2021 data)
+            c['title'] = c['title'].str.extract(
+                '((^.*[^\)\s]\s*$)|(.*(?=\([^\)]*\)\s?$)))')  # remove additional data in titles
+            c['title'] = c['title'].str.extract('(.*[^\s](?=\s*$))')  # remove trailing spaces
+            c['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
+            conferences = conferences.append(c)
     titles = pd.DataFrame(columns=['id', 'title'])
     titles['title'] = conferences['title'].unique()
     titles['id'] = titles.index
@@ -71,28 +72,40 @@ def journal_to_db(engine, config: Config):
     government_statements['title'] = gov['title']
     government_statements['starting_date'] = pd.to_datetime(gov['date'])
     for filename in os.listdir(data_path):
-        j = pd.read_excel(os.path.join(data_path, filename), 0, header=0)
-        j = j.iloc[:, 1:]
-        j.columns = list(j.iloc[0, :5].values) + ['issn 2', 'e-issn 2', 'points'] + list(j.columns[8:])
-        j = j.iloc[1:, 1:]
-        j[j.columns[7:]] = np.where(j[j.columns[7:]].notna(), True, False)
+        if int(filename[-9:-5]) > 2017:
+            j = pd.read_excel(os.path.join(data_path, filename), 0, header=0)
+            j = j.iloc[:, 1:]
+            j.columns = list(j.iloc[0, :5].values) + ['issn 2', 'e-issn 2', 'points'] + list(j.columns[8:])
+            j = j.iloc[1:, 1:]
+            j[j.columns[7:]] = np.where(j[j.columns[7:]].notna(), True, False)
 
-        # removing 2nd issn/title/e-issn if same
-        j.loc[(j['issn'] == j['issn 2']), 'issn 2'] = np.nan
-        j.loc[(j['Tytuł 1'] == j['Tytuł 2']), 'Tytuł 2'] = np.nan
-        j.loc[(j['e-issn'] == j['e-issn 2']), 'e-issn 2'] = np.nan
+            # removing 2nd issn/title/e-issn if same
+            j.loc[(j['issn'] == j['issn 2']), 'issn 2'] = np.nan
+            j.loc[(j['Tytuł 1'] == j['Tytuł 2']), 'Tytuł 2'] = np.nan
+            j.loc[(j['e-issn'] == j['e-issn 2']), 'e-issn 2'] = np.nan
 
-        # fill 1st title/issn/e-issn with 2nd if 1st not present
-        j.loc[j['Tytuł 1'].isna(), 'Tytuł 1'] = j[j['Tytuł 1'].isna()]['Tytuł 2']
-        j.loc[j['issn'].isna(), 'issn'] = j[j['issn'].isna()]['issn 2']
-        j.loc[j['e-issn'].isna(), 'e-issn'] = j[j['e-issn'].isna()]['e-issn 2']
+            # fill 1st title/issn/e-issn with 2nd if 1st not present
+            j.loc[j['Tytuł 1'].isna(), 'Tytuł 1'] = j[j['Tytuł 1'].isna()]['Tytuł 2']
+            j.loc[j['issn'].isna(), 'issn'] = j[j['issn'].isna()]['issn 2']
+            j.loc[j['e-issn'].isna(), 'e-issn'] = j[j['e-issn'].isna()]['e-issn 2']
 
-        j['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
-        if journals is None:
-            journals = j
-        else:
+            j['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
+            if journals is None:
+                journals = j
+            else:
+                journals = journals.append(j)
+    for filename in os.listdir(data_path):
+        if int(filename[-9:-5]) < 2018:
+            j = pd.read_excel(os.path.join(data_path, filename), 0, header=0)
+            j = j.iloc[:, 1:]
+            j.columns = list(j.iloc[0, :5].values) + ['issn 2', 'e-issn 2', 'points'] + list(j.columns[8:])
+            j = j.iloc[1:, 1:]
+            j[j.columns[7:]] = np.where(j[j.columns[7:]].notna(), True, False)
+
+            j['government_statement_id'] = government_statements[government_statements['starting_date'] == filename[-15:-5].replace('-','.')]['id'].values[0]
             journals = journals.append(j)
 
+    
     titles = pd.DataFrame(columns=['id', 'title'])
     titles['title'] = journals['Tytuł 1'].unique()
     titles['id'] = titles.index

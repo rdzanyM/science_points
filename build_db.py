@@ -107,6 +107,7 @@ def journal_to_db(engine, config: Config):
 
     
     titles = pd.DataFrame(columns=['id', 'title'])
+    journals['Tytuł 1'] = journals['Tytuł 1'].replace('\n', ' ', regex=True).replace('\r', '', regex=True)
     titles['title'] = journals['Tytuł 1'].unique()
     titles['id'] = titles.index
     joined = titles.join(journals.set_index('Tytuł 1'), on='title', how='outer')

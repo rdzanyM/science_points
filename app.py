@@ -444,8 +444,8 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
     Output('results-table', 'data'),
     Output('results-table', 'tooltip_data'),
     Input('button-search', 'n_clicks'),
-    Input('domain-input', 'value'),
-    Input('publication-type-input', 'value'),
+    State('domain-input', 'value'),
+    State('publication-type-input', 'value'),
     State('search-table', 'data'),
 )
 def search(n_clicks, domains, publication_type, search_table_data):

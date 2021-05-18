@@ -149,8 +149,8 @@ def get_results_wrapper() -> html.Div:
         style={'display': 'none'},
         children=[
             html.H4('Wyniki wyszukiwania'),
-            html.P('Szukane rodzaje publikacji: ', id='searched-publication-type'),
-            html.P('Szukane dziedziny: ', id='searched-domains'),
+            html.P('', id='searched-for-label'),
+            dcc.Input(id='searched-for-type', type='hidden'),
             dash_table.DataTable(
                 id='results-table',
                 columns=[
@@ -448,8 +448,8 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
 @app.callback(
     Output('results-table', 'data'),
     Output('results-table', 'tooltip_data'),
-    Output('searched-publication-type', 'children'),
-    Output('searched-domains', 'children'),
+    Output('searched-for-label', 'children'),
+    Output('searched-for-type', 'value'),
     Input('button-search', 'n_clicks'),
     State('domain-input', 'value'),
     State('publication-type-input', 'value'),
@@ -510,12 +510,9 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
-    searched_types = ['Szukane rodzaje publikacji: ', publication_type]
-    searched_domains = [', '+d for d in domains]
-    searched_domains[0] = ':' + searched_domains[0][1:]
-    searched_domains = ['Szukane dziedziny'] + searched_domains
 
-    return data, tooltip_data, searched_types, searched_domains
+    searched_for_label = f"Szukany rodzaj publikacji: {publication_type}. Dziedziny: {', '.join(domains)}."
+    return data, tooltip_data, searched_for_label, publication_type
 
 
 @app.callback(
@@ -552,15 +549,13 @@ def hide_results_table_before_search_click(n_clicks):
 @app.callback(
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
-    State('searched-publication-type', 'children'),
+    State('searched-for-type', 'value'),
     State('results-table', 'data'),
     State('sidebar-content', 'children')
 )
 def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
-
-    publication_type = publication_type[1]
 
     selected_row = data[selected_cells[0]['row']]
 
@@ -582,22 +577,20 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
         elif publication_type == 'konferencje':
             domains = cursor.get_conference_domains(selected_row['Title'])
 
-    return [
-        html.H5(
-            selected_row['Title'],
-        ),
-        html.P(
-            'Wartości punktowe w czasie:'
-        ),
+    result = [
+        html.H5(selected_row['Title']),
+        html.P('Wartości punktowe w czasie:'),
         dbc.Table(table_header + table_body, bordered=True),
-        html.P(
-            'Przypisane dziedziny:'
-        ),
-        html.Ul(
-            id='domain-list',
-            children=[html.Li(i) for i in domains],
-        ),
     ]
+    if domains:
+        result.extend([
+            html.P('Przypisane dziedziny:'),
+            html.Ul(
+                id='domain-list',
+                children=[html.Li(i) for i in domains],
+            ),
+        ])
+    return result
 
 
 @app.callback(

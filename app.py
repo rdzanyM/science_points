@@ -81,7 +81,16 @@ def get_publication_type_form_group() -> dbc.FormGroup:
     )
 
 
-def get_search_table_columns(title_text: str = 'Tytuł czasopisma') -> List[dict]:
+def publication_type_to_column_title(publication_type: str = None) -> str:
+    if publication_type == 'konferencje':
+        return 'Nazwa konferencji'
+    elif publication_type == 'monografie':
+        return 'Nazwa wydawnictwa'
+
+    return 'Tytuł czasopisma'
+
+
+def get_search_table_columns(title_text) -> List[dict]:
     return [
         {'id': 'Title', 'name': title_text, 'type': 'text', },
         {'id': 'Date', 'name': 'Data', 'type': 'datetime', }
@@ -92,7 +101,7 @@ def get_search_table() -> html.Div:
     table = html.Div([
         dash_table.DataTable(
             id='search-table',
-            columns=get_search_table_columns(),
+            columns=get_search_table_columns(publication_type_to_column_title()),
             data=[
                 {'Title': 'IEEE Transactions on Pattern Analysis and Machine Intelligence', 'Date': '2020'},
                 {'Title': 'IEEE Intelligent Systems', 'Date': '2018'},
@@ -143,6 +152,20 @@ def get_search_table() -> html.Div:
     return table
 
 
+def get_results_table_columns(title_text: str) -> List[dict]:
+    return [
+        {'id': 'Title', 'name': title_text, 'type': 'text'},
+        {'id': 'Date', 'name': 'Data', 'type': 'datetime'},
+        {'id': 'Points', 'name': 'Punkty', 'type': 'numeric'},
+        {
+            'id': 'Similarity',
+            'name': 'Dopasowanie',
+            'type': 'numeric',
+            'format': Format(precision=0, scheme=Scheme.percentage),
+        },
+    ]
+
+
 def get_results_wrapper() -> html.Div:
     wrapper_content = html.Div(
         id='wrapper-content',
@@ -153,16 +176,7 @@ def get_results_wrapper() -> html.Div:
             dcc.Input(id='searched-for-type', type='hidden'),
             dash_table.DataTable(
                 id='results-table',
-                columns=[
-                    {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
-                    {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
-                    {'id': 'Points', 'name': 'Punkty', 'type': 'numeric', },
-                    {'id': 'Similarity',
-                     'name': 'Dopasowanie',
-                     'type': 'numeric',
-                     'format': Format(precision=0, scheme=Scheme.percentage)
-                     }
-                ],
+                columns=get_results_table_columns(publication_type_to_column_title()),
                 style_cell={
                     'padding': '0.2rem 0.3rem',
                 },
@@ -439,13 +453,14 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
             engine='python',
         ).fillna('')
     except Exception:
-        # This should properly report the error, but meh, we can leave without it
+        # This should properly report the error, but meh, we can live without it
         raise PreventUpdate
 
     return df.to_dict('records')
 
 
 @app.callback(
+    Output('results-table', 'columns'),
     Output('results-table', 'data'),
     Output('results-table', 'tooltip_data'),
     Output('searched-for-label', 'children'),
@@ -457,7 +472,7 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
 )
 def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
-        return None, None, None, None
+        return None, None, None, None, None
 
     with Cursor(engine) as db_cursor:
         if publication_type == 'czasopisma':
@@ -511,8 +526,12 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
 
-    searched_for_label = f"Szukany rodzaj publikacji: {publication_type}. Dziedziny: {', '.join(domains)}."
-    return data, tooltip_data, searched_for_label, publication_type
+    searched_for_label = f'Szukany rodzaj publikacji: {publication_type}.'
+    if publication_type != 'monografie' and domains:
+        searched_for_label += f" Dziedziny: {', '.join(domains)}."
+
+    columns = get_results_table_columns(publication_type_to_column_title(publication_type))
+    return columns, data, tooltip_data, searched_for_label, publication_type
 
 
 @app.callback(

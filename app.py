@@ -26,7 +26,7 @@ from src.text_index import IndexReader
 from src.app_utils import (
     format_colors_based_on_similarity,
     format_suggestions_based_on_search,
-    row_col,
+    row_col, format_points_tooltip_based_on_search,
 )
 from src.orm import Cursor
 
@@ -493,11 +493,19 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
             sim, df = query_function(row["Title"])
             try:
+                domains_match = True
                 name = df.name.iloc[0]
+                if publication_type == 'czasopisma':
+                    domains_for_selected_row = set(db_cursor.get_journal_domains(name))
+                elif publication_type == 'konferencje':
+                    domains_for_selected_row = set(db_cursor.get_conference_domains(name))
                 date_points = db_cursor.get_date_points(name, publication_type)
                 for _, date, points in date_points:
                     points_for_selected_date = points
                     if date > row['Date']:
+                        if publication_type != 'monografie' and len(domains_for_selected_row & set(domains)) == 0:
+                            domains_match = False
+                            points_for_selected_date = 0
                         break
             except AttributeError as e:
                 if 'name' in str(e):  # No matches have been found for this title
@@ -521,7 +529,10 @@ def search(n_clicks, domains, publication_type, search_table_data):
                     'value': format_suggestions_based_on_search(row['Title'], df),
                     'type': 'markdown',
                 },
-                'Points': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Points': {
+                    'value': format_points_tooltip_based_on_search(domains_match, name),
+                    'type': 'text'
+                },
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })

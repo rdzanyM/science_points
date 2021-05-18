@@ -5,6 +5,14 @@ import colorlover as cl
 import pandas as pd
 
 
+def format_points_tooltip_based_on_search(domains_match: bool,
+                                          publication_name: str) -> str:
+    if domains_match:
+        return "Kliknij, by zobaczyć szczegóły"
+    else:
+        return f"\"{publication_name}\" nie liczy się w wybranych przez Ciebie dziedzinach naukowych."
+
+
 def format_suggestions_based_on_search(searched_term: str, search_result: pd.DataFrame) -> str:
     if len(search_result) == 0:
         return f'Szukano: *{searched_term}*, nie znaleziono żadnych wyników.'

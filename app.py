@@ -6,6 +6,7 @@
 import base64
 from functools import partial
 from io import StringIO
+from typing import List
 
 import dash
 from dash.dependencies import Input, Output, State
@@ -80,14 +81,18 @@ def get_publication_type_form_group() -> dbc.FormGroup:
     )
 
 
+def get_search_table_columns(title_text: str = 'Tytuł czasopisma') -> List[dict]:
+    return [
+        {'id': 'Title', 'name': title_text, 'type': 'text', },
+        {'id': 'Date', 'name': 'Data', 'type': 'datetime', }
+    ]
+
+
 def get_search_table() -> html.Div:
     table = html.Div([
         dash_table.DataTable(
             id='search-table',
-            columns=(
-                    [{'id': 'Title', 'name': 'Tytuł', 'type': 'text', }] +
-                    [{'id': 'Date', 'name': 'Data', 'type': 'datetime', }]
-            ),
+            columns=get_search_table_columns(),
             data=[
                 {'Title': 'IEEE Transactions on Pattern Analysis and Machine Intelligence', 'Date': '2020'},
                 {'Title': 'IEEE Intelligent Systems', 'Date': '2018'},
@@ -97,7 +102,7 @@ def get_search_table() -> html.Div:
             ],
             tooltip={
                 'Title': {
-                    'value': 'Pełny lub częściowy tytuł',
+                    'value': 'Pełna lub częściowa nazwa',
                     'use_with': 'both',
                     'delay': 500
                 },
@@ -139,7 +144,6 @@ def get_search_table() -> html.Div:
 
 
 def get_results_wrapper() -> html.Div:
-
     wrapper_content = html.Div(
         id='wrapper-content',
         style={'display': 'none'},
@@ -345,7 +349,6 @@ def get_content_column():
     )
 
 
-
 def get_footer() -> html.Footer:
     return html.Footer(
         [
@@ -517,12 +520,23 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
 @app.callback(
     Output('domain-form-group', 'style'),
+    Output('search-table', 'columns'),
     Input('publication-type-input', 'value'),
 )
 def hide_domains_for_monographs(publication_type):
-    if publication_type == 'monografie':
-        return {'display':  'none'}
-    return {'display': 'block'}
+    style = {'display': 'block'}
+    title_name = None
+
+    if publication_type == 'czasopisma':
+        title_name = 'Tytuł czasopisma'
+    elif publication_type == 'konferencje':
+        title_name = 'Nazwa konferencji'
+    elif publication_type == 'monografie':
+        title_name = 'Nazwa wydawnictwa'
+        style = {'display': 'none'}
+
+    return style, get_search_table_columns(title_name)
+
 
 @app.callback(
     Output('loading-results', 'style'),
@@ -534,10 +548,10 @@ def hide_results_table_before_search_click(n_clicks):
         return {'display': 'none'}, {'display': 'none'}
     return {'display': 'block'}, {'display': 'block'}
 
+
 @app.callback(
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
-    #State('publication-type-input', 'value'),
     State('searched-publication-type', 'children'),
     State('results-table', 'data'),
     State('sidebar-content', 'children')

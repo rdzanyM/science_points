@@ -548,7 +548,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 },
                 'Points': {
                     'value': format_points_tooltip_based_on_search(domains_match, name),
-                    'type': 'text'
+                    'type': 'markdown'
                 },
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},

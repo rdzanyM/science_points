@@ -73,13 +73,15 @@ class Cursor:
         domains = self.session.query(Domains) \
             .join(JournalDomains) \
             .join(Journals) \
-            .where(Journals.title == title).all()
+            .where(Journals.title == title) \
+            .order_by(Domains.name).all()
         return [d.name for d in domains]
 
     def get_conference_domains(self, title):
         domains = self.session.query(Domains) \
             .join(ConferenceDomains) \
             .join(Conferences) \
-            .where(Conferences.title == title).all()
+            .where(Conferences.title == title) \
+            .order_by(Domains.name).all()
         return [d.name for d in domains]
 

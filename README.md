@@ -1,2 +1,2 @@
 # science_points
-App is available at https://science-points.herokuapp.com/
+App is available at https://ministry-points.herokuapp.com/

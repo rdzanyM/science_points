@@ -6,6 +6,7 @@
 import base64
 from functools import partial
 from io import StringIO
+from typing import List
 
 import dash
 from dash.dependencies import Input, Output, State
@@ -24,8 +25,8 @@ from src import Config
 from src.text_index import IndexReader
 from src.app_utils import (
     format_colors_based_on_similarity,
-    format_suggestions_based_on_search,
-    row_col,
+    format_suggestions_based_on_search_sidebar,
+    row_col, format_points_tooltip_based_on_search, format_suggestions_based_on_search,
 )
 from src.orm import Cursor
 
@@ -80,14 +81,27 @@ def get_publication_type_form_group() -> dbc.FormGroup:
     )
 
 
+def publication_type_to_column_title(publication_type: str = None) -> str:
+    if publication_type == 'konferencje':
+        return 'Nazwa konferencji'
+    elif publication_type == 'monografie':
+        return 'Nazwa wydawnictwa'
+
+    return 'Tytuł czasopisma'
+
+
+def get_search_table_columns(title_text) -> List[dict]:
+    return [
+        {'id': 'Title', 'name': title_text, 'type': 'text', },
+        {'id': 'Date', 'name': 'Data', 'type': 'datetime', }
+    ]
+
+
 def get_search_table() -> html.Div:
     table = html.Div([
         dash_table.DataTable(
             id='search-table',
-            columns=(
-                    [{'id': 'Title', 'name': 'Tytuł', 'type': 'text', }] +
-                    [{'id': 'Date', 'name': 'Data', 'type': 'datetime', }]
-            ),
+            columns=get_search_table_columns(publication_type_to_column_title()),
             data=[
                 {'Title': 'IEEE Transactions on Pattern Analysis and Machine Intelligence', 'Date': '2020'},
                 {'Title': 'IEEE Intelligent Systems', 'Date': '2018'},
@@ -97,15 +111,17 @@ def get_search_table() -> html.Div:
             ],
             tooltip={
                 'Title': {
-                    'value': 'Pełny lub częściowy tytuł',
+                    'value': 'Pełna lub częściowa nazwa',
                     'use_with': 'both',
                     'delay': 500
                 },
                 'Date': {
                     'value': 'YYYY lub YYYY-MM-DD',
-                    'use_with': 'both',
                     'delay': 500
                 }
+            },
+            tooltip_header={
+                'Date': 'Data według której liczone są punkty za osiągnięcia naukowe. Format YYYY lub YYYY-MM-DD',
             },
             style_as_list_view=False,
             style_cell={
@@ -138,25 +154,32 @@ def get_search_table() -> html.Div:
     return table
 
 
-def get_results_wrapper() -> html.Div:
+def get_results_table_columns(title_text: str) -> List[dict]:
+    return [
+        {'id': 'Title', 'name': title_text, 'type': 'text'},
+        {'id': 'Date', 'name': 'Data', 'type': 'datetime'},
+        {'id': 'Points', 'name': 'Punkty', 'type': 'numeric'},
+        {
+            'id': 'Similarity',
+            'name': 'Dopasowanie',
+            'type': 'numeric',
+            'format': Format(precision=0, scheme=Scheme.percentage),
+        },
+    ]
 
+
+def get_results_wrapper() -> html.Div:
     wrapper_content = html.Div(
         id='wrapper-content',
         style={'display': 'none'},
         children=[
             html.H4('Wyniki wyszukiwania'),
+            html.P('', id='searched-for-label'),
+            dcc.Input(id='searched-for-type', type='hidden'),
+            dcc.Input(id='searched-for-domains', type='hidden'),
             dash_table.DataTable(
                 id='results-table',
-                columns=[
-                    {'id': 'Title', 'name': 'Tytuł', 'type': 'text', },
-                    {'id': 'Date', 'name': 'Data', 'type': 'datetime', },
-                    {'id': 'Points', 'name': 'Punkty', 'type': 'numeric', },
-                    {'id': 'Similarity',
-                     'name': 'Dopasowanie',
-                     'type': 'numeric',
-                     'format': Format(precision=0, scheme=Scheme.percentage)
-                     }
-                ],
+                columns=get_results_table_columns(publication_type_to_column_title()),
                 style_cell={
                     'padding': '0.2rem 0.3rem',
                 },
@@ -183,9 +206,23 @@ def get_results_wrapper() -> html.Div:
                         'if': {'column_id': 'Date'},
                         'textAlign': 'left',
                     },
+                    {
+                        'if': {
+                            'column_id': 'Points',
+                            'filter_query': '{Points} < 1'
+                        },
+                        'color': 'var(--danger)',
+                        'fontWeight': 'bold',
+                    },
                 ] + format_colors_based_on_similarity(),
                 row_deletable=True,
                 row_selectable=False,
+                tooltip_header={
+                    'Title': 'Nazwa znaleziona w bazie danych',
+                    'Date': 'Data według której liczone są punkty za osiągnięcia naukowe',
+                    'Points': 'Punkty ustalone na podstawie wybranych dziedzin i daty',
+                    'Similarity': 'W jakim stopniu wynik wyszukiwania jest podobny do zapytania',
+                },
                 tooltip_duration=None,
                 tooltip_delay=0,
             ),
@@ -312,7 +349,8 @@ def get_sidebar():
                     "wyszukiwania, aby zobaczyć więcej informacji.",
                     id='starting-info'
                 ),
-            )
+            ),
+            html.Div(id='sidebar-suggestions', hidden=True)
         ],
         className='bg-light col-3',
         id='sidebar',
@@ -341,7 +379,6 @@ def get_content_column():
             ],
         ),
     )
-
 
 
 def get_footer() -> html.Footer:
@@ -434,23 +471,28 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
             engine='python',
         ).fillna('')
     except Exception:
-        # This should properly report the error, but meh, we can leave without it
+        # This should properly report the error, but meh, we can live without it
         raise PreventUpdate
 
     return df.to_dict('records')
 
 
 @app.callback(
+    Output('results-table', 'columns'),
     Output('results-table', 'data'),
     Output('results-table', 'tooltip_data'),
+    Output('searched-for-label', 'children'),
+    Output('searched-for-type', 'value'),
+    Output('searched-for-domains', 'value'),
+    Output('sidebar-suggestions', 'value'),
     Input('button-search', 'n_clicks'),
-    Input('domain-input', 'value'),
-    Input('publication-type-input', 'value'),
+    State('domain-input', 'value'),
+    State('publication-type-input', 'value'),
     State('search-table', 'data'),
 )
 def search(n_clicks, domains, publication_type, search_table_data):
     if n_clicks is None:
-        return None, None
+        raise PreventUpdate
 
     with Cursor(engine) as db_cursor:
         if publication_type == 'czasopisma':
@@ -467,15 +509,24 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
         data = []
         tooltip_data = []
+        suggestions = []
         for row in search_table_data:
 
             sim, df = query_function(row["Title"])
             try:
+                domains_match = True
                 name = df.name.iloc[0]
+                if publication_type == 'czasopisma':
+                    domains_for_selected_row = set(db_cursor.get_journal_domains(name))
+                elif publication_type == 'konferencje':
+                    domains_for_selected_row = set(db_cursor.get_conference_domains(name))
                 date_points = db_cursor.get_date_points(name, publication_type)
                 for _, date, points in date_points:
                     points_for_selected_date = points
                     if date > row['Date']:
+                        if publication_type != 'monografie' and len(domains_for_selected_row & set(domains)) == 0:
+                            domains_match = False
+                            points_for_selected_date = 0
                         break
             except AttributeError as e:
                 if 'name' in str(e):  # No matches have been found for this title
@@ -486,6 +537,12 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 else:
                     raise e
 
+            try:
+                elems = df['name'].tolist()[1:]
+            except:
+                elems = []
+
+            suggestions.append((row["Title"], elems))
             data.append({
                 'Title': name,
                 'Date': row["Date"],
@@ -493,28 +550,46 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'PointsHistory': date_points,
                 'Similarity': round(float(sim), 2)
             })
-
             tooltip_data.append({
                 'Title': {
                     'value': format_suggestions_based_on_search(row['Title'], df),
                     'type': 'markdown',
                 },
-                'Points': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Points': {
+                    'value': format_points_tooltip_based_on_search(domains_match, name),
+                    'type': 'markdown'
+                },
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
 
-    return data, tooltip_data
+    searched_for_label = f'Szukany rodzaj publikacji: {publication_type}.'
+    if publication_type != 'monografie' and domains:
+        searched_for_label += f" Dziedziny: {', '.join(domains)}."
+
+    columns = get_results_table_columns(publication_type_to_column_title(publication_type))
+    return columns, data, tooltip_data, searched_for_label, publication_type, domains, suggestions
 
 
 @app.callback(
     Output('domain-form-group', 'style'),
+    Output('search-table', 'columns'),
     Input('publication-type-input', 'value'),
 )
 def hide_domains_for_monographs(publication_type):
-    if publication_type == 'monografie':
-        return {'display':  'none'}
-    return {'display': 'block'}
+    style = {'display': 'block'}
+    title_name = None
+
+    if publication_type == 'czasopisma':
+        title_name = 'Tytuł czasopisma'
+    elif publication_type == 'konferencje':
+        title_name = 'Nazwa konferencji'
+    elif publication_type == 'monografie':
+        title_name = 'Nazwa wydawnictwa'
+        style = {'display': 'none'}
+
+    return style, get_search_table_columns(title_name)
+
 
 @app.callback(
     Output('loading-results', 'style'),
@@ -526,29 +601,50 @@ def hide_results_table_before_search_click(n_clicks):
         return {'display': 'none'}, {'display': 'none'}
     return {'display': 'block'}, {'display': 'block'}
 
+
 @app.callback(
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
-    State('publication-type-input', 'value'),
+    State('searched-for-type', 'value'),
+    State('searched-for-domains', 'value'),
     State('results-table', 'data'),
-    State('sidebar-content', 'children')
+    State('sidebar-content', 'children'),
+    State('sidebar-suggestions', 'value')
 )
-def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children):
+def update_sidebar_on_row_click(
+        selected_cells,
+        publication_type,
+        searched_domains,
+        data,
+        current_children,
+        suggestions
+):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
 
     selected_row = data[selected_cells[0]['row']]
 
+    table_tooltips = [
+        'Data opublikowania rozporządzenia',
+        'Wartość punktowa podana w rozporządzeniu',
+    ]
     table_header = [
-        html.Thead(html.Tr([html.Th('Data'), html.Th('Punkty')]))
+        html.Thead(html.Tr([
+            html.Th('Data', title=table_tooltips[0]),
+            html.Th('Punkty', title=table_tooltips[1]),
+        ]))
     ]
 
     past_points = [
-        html.Tr([html.Td(date), html.Td(points)])
+        html.Tr([
+            html.Td(date, title=table_tooltips[0]),
+            html.Td(points, title=table_tooltips[1]),
+        ])
         for _, date, points in selected_row['PointsHistory']
     ]
 
     table_body = [html.Tbody(past_points)]
+    title = selected_row['Title']
 
     domains = []
     with Cursor(engine) as cursor:
@@ -557,22 +653,28 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
         elif publication_type == 'konferencje':
             domains = cursor.get_conference_domains(selected_row['Title'])
 
-    return [
-        html.H5(
-            selected_row['Title'],
-        ),
-        html.P(
-            'Wartości punktowe w czasie:'
-        ),
+    result = [
+        html.H5(title),
         dbc.Table(table_header + table_body, bordered=True),
-        html.P(
-            'Przypisane dziedziny:'
-        ),
-        html.Ul(
-            id='domain-list',
-            children=[html.Li(i) for i in domains],
-        ),
     ]
+    if domains:
+        result.extend([
+            html.P('Przypisane dziedziny:'),
+            html.Ul(
+                id='domain-list',
+                children=[
+                    html.Li(html.Strong(i)) if i in searched_domains else html.Li(i)
+                    for i in domains
+                ],
+            ),
+        ])
+
+    original_name, additional_list = suggestions[selected_cells[0]['row']]
+    suggestion_list = [
+        dcc.Markdown(format_suggestions_based_on_search_sidebar(original_name, additional_list))
+    ]
+    result.extend(suggestion_list)
+    return result
 
 
 @app.callback(

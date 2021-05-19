@@ -148,5 +148,7 @@ class IndexReader:
 
         # Compute absolute similarity, but first lowercase both strings
         sim = jellyfish.jaro_winkler_similarity(df.iloc[0]['name'].lower(), text.lower())
+        # "Sharpen" the similarity to make it more intuitive
+        sim **= 1.5
 
         return sim, df

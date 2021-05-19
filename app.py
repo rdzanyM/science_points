@@ -117,9 +117,11 @@ def get_search_table() -> html.Div:
                 },
                 'Date': {
                     'value': 'YYYY lub YYYY-MM-DD',
-                    'use_with': 'both',
                     'delay': 500
                 }
+            },
+            tooltip_header={
+                'Date': 'Data według której liczone są punkty za osiągnięcia naukowe. Format YYYY lub YYYY-MM-DD',
             },
             style_as_list_view=False,
             style_cell={
@@ -215,6 +217,12 @@ def get_results_wrapper() -> html.Div:
                 ] + format_colors_based_on_similarity(),
                 row_deletable=True,
                 row_selectable=False,
+                tooltip_header={
+                    'Title': 'Nazwa znaleziona w bazie danych',
+                    'Date': 'Data według której liczone są punkty za osiągnięcia naukowe',
+                    'Points': 'Punkty ustalone na podstawie wybranych dziedzin i daty',
+                    'Similarity': 'W jakim stopniu wynik wyszukiwania jest podobny do zapytania',
+                },
                 tooltip_duration=None,
                 tooltip_delay=0,
             ),

@@ -5,6 +5,16 @@ import colorlover as cl
 import pandas as pd
 
 
+def format_points_tooltip_based_on_search(
+        domains_match: bool,
+        publication_name: str
+) -> str:
+    if domains_match:
+        return "Kliknij, by zobaczyć szczegóły"
+    else:
+        return f"*{publication_name}* nie liczy się w wybranych dziedzinach naukowych."
+
+
 def format_suggestions_based_on_search(searched_term: str, search_result: pd.DataFrame) -> str:
     if len(search_result) == 0:
         return f'Szukano: *{searched_term}*, nie znaleziono żadnych wyników.'
@@ -15,6 +25,16 @@ def format_suggestions_based_on_search(searched_term: str, search_result: pd.Dat
     markdown_value = f'Szukano: *{searched_term}*.\n\n Inne sugestie:'
     for i in range(1, min(len(search_result), 3)):
         markdown_value += f'\n{i}. {search_result.name.iloc[i]}'
+    return markdown_value
+
+
+def format_suggestions_based_on_search_sidebar(searched_term: str, search_result: list) -> str:
+    if len(search_result) == 0:
+        return f'Szukano: *{searched_term}*, brak innych sugestii.'
+
+    markdown_value = f'Szukano: *{searched_term}*.\n\n Inne sugestie:'
+    for i in range(min(len(search_result), 3)):
+        markdown_value += f'\n* {search_result[i]}'
     return markdown_value
 
 

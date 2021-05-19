@@ -25,8 +25,8 @@ from src import Config
 from src.text_index import IndexReader
 from src.app_utils import (
     format_colors_based_on_similarity,
-    format_suggestions_based_on_search,
-    row_col,
+    format_suggestions_based_on_search_sidebar,
+    row_col, format_points_tooltip_based_on_search, format_suggestions_based_on_search,
 )
 from src.orm import Cursor
 
@@ -203,6 +203,14 @@ def get_results_wrapper() -> html.Div:
                         'if': {'column_id': 'Date'},
                         'textAlign': 'left',
                     },
+                    {
+                        'if': {
+                            'column_id': 'Points',
+                            'filter_query': '{Points} < 1'
+                        },
+                        'color': 'var(--danger)',
+                        'fontWeight': 'bold',
+                    },
                 ] + format_colors_based_on_similarity(),
                 row_deletable=True,
                 row_selectable=False,
@@ -332,7 +340,8 @@ def get_sidebar():
                     "wyszukiwania, aby zobaczyć więcej informacji.",
                     id='starting-info'
                 ),
-            )
+            ),
+            html.Div(id='sidebar_suggestions', hidden=True)
         ],
         className='bg-light col-3',
         id='sidebar',
@@ -465,14 +474,16 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
     Output('results-table', 'tooltip_data'),
     Output('searched-for-label', 'children'),
     Output('searched-for-type', 'value'),
+    Output('sidebar_suggestions', 'value'),
     Input('button-search', 'n_clicks'),
     State('domain-input', 'value'),
     State('publication-type-input', 'value'),
     State('search-table', 'data'),
 )
 def search(n_clicks, domains, publication_type, search_table_data):
+
     if n_clicks is None:
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     with Cursor(engine) as db_cursor:
         if publication_type == 'czasopisma':
@@ -489,15 +500,24 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
         data = []
         tooltip_data = []
+        suggestions = []
         for row in search_table_data:
 
             sim, df = query_function(row["Title"])
             try:
+                domains_match = True
                 name = df.name.iloc[0]
+                if publication_type == 'czasopisma':
+                    domains_for_selected_row = set(db_cursor.get_journal_domains(name))
+                elif publication_type == 'konferencje':
+                    domains_for_selected_row = set(db_cursor.get_conference_domains(name))
                 date_points = db_cursor.get_date_points(name, publication_type)
                 for _, date, points in date_points:
                     points_for_selected_date = points
                     if date > row['Date']:
+                        if publication_type != 'monografie' and len(domains_for_selected_row & set(domains)) == 0:
+                            domains_match = False
+                            points_for_selected_date = 0
                         break
             except AttributeError as e:
                 if 'name' in str(e):  # No matches have been found for this title
@@ -508,6 +528,12 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 else:
                     raise e
 
+            try:
+                elems = df['name'].tolist()[1:]
+            except:
+                elems = []
+
+            suggestions.append((row["Title"], elems))
             data.append({
                 'Title': name,
                 'Date': row["Date"],
@@ -515,13 +541,15 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 'PointsHistory': date_points,
                 'Similarity': round(float(sim), 2)
             })
-
             tooltip_data.append({
                 'Title': {
                     'value': format_suggestions_based_on_search(row['Title'], df),
                     'type': 'markdown',
                 },
-                'Points': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
+                'Points': {
+                    'value': format_points_tooltip_based_on_search(domains_match, name),
+                    'type': 'markdown'
+                },
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
                 'Similarity': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
             })
@@ -531,7 +559,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
         searched_for_label += f" Dziedziny: {', '.join(domains)}."
 
     columns = get_results_table_columns(publication_type_to_column_title(publication_type))
-    return columns, data, tooltip_data, searched_for_label, publication_type
+    return columns, data, tooltip_data, searched_for_label, publication_type, suggestions
 
 
 @app.callback(
@@ -570,9 +598,10 @@ def hide_results_table_before_search_click(n_clicks):
     Input('results-table', 'selected_cells'),
     State('searched-for-type', 'value'),
     State('results-table', 'data'),
-    State('sidebar-content', 'children')
+    State('sidebar-content', 'children'),
+    State('sidebar_suggestions', 'value')
 )
-def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children):
+def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children, suggestions):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
 
@@ -588,6 +617,7 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
     ]
 
     table_body = [html.Tbody(past_points)]
+    title = selected_row['Title']
 
     domains = []
     with Cursor(engine) as cursor:
@@ -597,7 +627,7 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
             domains = cursor.get_conference_domains(selected_row['Title'])
 
     result = [
-        html.H5(selected_row['Title']),
+        html.H5(title),
         html.P('Wartości punktowe w czasie:'),
         dbc.Table(table_header + table_body, bordered=True),
     ]
@@ -609,6 +639,12 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
                 children=[html.Li(i) for i in domains],
             ),
         ])
+
+    original_name, additional_list = suggestions[selected_cells[0]['row']]
+    suggestion_list = [
+        dcc.Markdown(format_suggestions_based_on_search_sidebar(original_name, additional_list))
+    ]
+    result.extend(suggestion_list)
     return result
 
 

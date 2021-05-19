@@ -624,12 +624,22 @@ def update_sidebar_on_row_click(
 
     selected_row = data[selected_cells[0]['row']]
 
+    table_tooltips = [
+        'Data opublikowania rozporządzenia',
+        'Wartość punktowa podana w rozporządzeniu',
+    ]
     table_header = [
-        html.Thead(html.Tr([html.Th('Data'), html.Th('Punkty')]))
+        html.Thead(html.Tr([
+            html.Th('Data', title=table_tooltips[0]),
+            html.Th('Punkty', title=table_tooltips[1]),
+        ]))
     ]
 
     past_points = [
-        html.Tr([html.Td(date), html.Td(points)])
+        html.Tr([
+            html.Td(date, title=table_tooltips[0]),
+            html.Td(points, title=table_tooltips[1]),
+        ])
         for _, date, points in selected_row['PointsHistory']
     ]
 
@@ -645,7 +655,6 @@ def update_sidebar_on_row_click(
 
     result = [
         html.H5(title),
-        html.P('Wartości punktowe w czasie:'),
         dbc.Table(table_header + table_body, bordered=True),
     ]
     if domains:

@@ -203,6 +203,14 @@ def get_results_wrapper() -> html.Div:
                         'if': {'column_id': 'Date'},
                         'textAlign': 'left',
                     },
+                    {
+                        'if': {
+                            'column_id': 'Points',
+                            'filter_query': '{Points} < 1'
+                        },
+                        'color': 'var(--danger)',
+                        'fontWeight': 'bold',
+                    },
                 ] + format_colors_based_on_similarity(),
                 row_deletable=True,
                 row_selectable=False,

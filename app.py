@@ -174,6 +174,7 @@ def get_results_wrapper() -> html.Div:
             html.H4('Wyniki wyszukiwania'),
             html.P('', id='searched-for-label'),
             dcc.Input(id='searched-for-type', type='hidden'),
+            dcc.Input(id='searched-for-domains', type='hidden'),
             dash_table.DataTable(
                 id='results-table',
                 columns=get_results_table_columns(publication_type_to_column_title()),
@@ -341,7 +342,7 @@ def get_sidebar():
                     id='starting-info'
                 ),
             ),
-            html.Div(id='sidebar_suggestions', hidden=True)
+            html.Div(id='sidebar-suggestions', hidden=True)
         ],
         className='bg-light col-3',
         id='sidebar',
@@ -474,16 +475,16 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
     Output('results-table', 'tooltip_data'),
     Output('searched-for-label', 'children'),
     Output('searched-for-type', 'value'),
-    Output('sidebar_suggestions', 'value'),
+    Output('searched-for-domains', 'value'),
+    Output('sidebar-suggestions', 'value'),
     Input('button-search', 'n_clicks'),
     State('domain-input', 'value'),
     State('publication-type-input', 'value'),
     State('search-table', 'data'),
 )
 def search(n_clicks, domains, publication_type, search_table_data):
-
     if n_clicks is None:
-        return None, None, None, None, None, None
+        raise PreventUpdate
 
     with Cursor(engine) as db_cursor:
         if publication_type == 'czasopisma':
@@ -559,7 +560,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
         searched_for_label += f" Dziedziny: {', '.join(domains)}."
 
     columns = get_results_table_columns(publication_type_to_column_title(publication_type))
-    return columns, data, tooltip_data, searched_for_label, publication_type, suggestions
+    return columns, data, tooltip_data, searched_for_label, publication_type, domains, suggestions
 
 
 @app.callback(
@@ -597,11 +598,19 @@ def hide_results_table_before_search_click(n_clicks):
     Output('sidebar-content', 'children'),
     Input('results-table', 'selected_cells'),
     State('searched-for-type', 'value'),
+    State('searched-for-domains', 'value'),
     State('results-table', 'data'),
     State('sidebar-content', 'children'),
-    State('sidebar_suggestions', 'value')
+    State('sidebar-suggestions', 'value')
 )
-def update_sidebar_on_row_click(selected_cells, publication_type, data, current_children, suggestions):
+def update_sidebar_on_row_click(
+        selected_cells,
+        publication_type,
+        searched_domains,
+        data,
+        current_children,
+        suggestions
+):
     if selected_cells is None or len(selected_cells) == 0:
         return current_children
 
@@ -636,7 +645,10 @@ def update_sidebar_on_row_click(selected_cells, publication_type, data, current_
             html.P('Przypisane dziedziny:'),
             html.Ul(
                 id='domain-list',
-                children=[html.Li(i) for i in domains],
+                children=[
+                    html.Li(html.Strong(i)) if i in searched_domains else html.Li(i)
+                    for i in domains
+                ],
             ),
         ])
 

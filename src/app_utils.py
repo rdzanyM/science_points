@@ -26,6 +26,16 @@ def format_suggestions_based_on_search(searched_term: str, search_result: pd.Dat
     return markdown_value
 
 
+def format_suggestions_based_on_search_sidebar(searched_term: str, search_result: list) -> str:
+    if len(search_result) == 0:
+        return f'Szukano: *{searched_term}*, brak innych sugestii.'
+
+    markdown_value = f'Szukano: *{searched_term}*.\n\n Inne sugestie:'
+    for i in range(min(len(search_result), 3)):
+        markdown_value += f'\n* {search_result[i]}'
+    return markdown_value
+
+
 def format_colors_based_on_similarity():
     scale = cl.scales['5']['seq']['PuBu']
     return [

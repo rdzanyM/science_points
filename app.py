@@ -521,13 +521,17 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 elif publication_type == 'konferencje':
                     domains_for_selected_row = set(db_cursor.get_conference_domains(name))
                 date_points = db_cursor.get_date_points(name, publication_type)
+                points_for_selected_date = None
                 for _, date, points in date_points:
-                    points_for_selected_date = points
+                    if points_for_selected_date is None:
+                        points_for_selected_date = points
                     if date > row['Date']:
                         if publication_type != 'monografie' and len(domains_for_selected_row & set(domains)) == 0:
                             domains_match = False
                             points_for_selected_date = 0
                         break
+                    else:
+                        points_for_selected_date = points
             except AttributeError as e:
                 if 'name' in str(e):  # No matches have been found for this title
                     sim = 0.0
@@ -543,6 +547,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 elems = []
 
             suggestions.append((row["Title"], elems))
+            date_points.reverse()
             data.append({
                 'Title': name,
                 'Date': row["Date"],

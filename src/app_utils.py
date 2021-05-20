@@ -7,9 +7,13 @@ import pandas as pd
 
 def format_points_tooltip_based_on_search(
         domains_match: bool,
-        publication_name: str
+        publication_name: str,
+        date: str,
+        publication_type: str
 ) -> str:
-    if domains_match:
+    if publication_type == 'czasopisma' and int(date[:4]) < 2018:
+        return 'Punktacja według starego systemu (max 50 pkt).  \nKliknij, by zobaczyć szczegóły'
+    elif domains_match:
         return "Kliknij, by zobaczyć szczegóły"
     else:
         return f"*{publication_name}* nie liczy się w wybranych dziedzinach naukowych."

@@ -218,7 +218,7 @@ def get_results_wrapper() -> html.Div:
                     {
                         'if': {
                             'column_id': 'Points',
-                            'filter_query': '{Date} < "2019-12-18"'
+                            'filter_query': '{Date} < "2019-12-18" && {Date} contains " "'
                         },
                         'textDecoration': 'underline',
                     },
@@ -557,6 +557,8 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
             suggestions.append((row["Title"], elems))
             date_points.reverse()
+            if publication_type == 'czasopisma':
+                row['Date'] = row['Date'] + ' '
             data.append({
                 'Title': name,
                 'Date': row["Date"],

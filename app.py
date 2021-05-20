@@ -191,6 +191,7 @@ def get_results_wrapper() -> html.Div:
                     'textAlign': 'left',
                     'backgroundColor': 'var(--light)',
                     'color': 'black',
+                    'textDecoration': 'none',
                 },
                 style_cell_conditional=[
                     {
@@ -213,6 +214,13 @@ def get_results_wrapper() -> html.Div:
                         },
                         'color': 'var(--danger)',
                         'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {
+                            'column_id': 'Points',
+                            'filter_query': '{Date} < "2019-12-18"'
+                        },
+                        'textDecoration': 'underline',
                     },
                 ] + format_colors_based_on_similarity(),
                 row_deletable=True,
@@ -531,6 +539,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                             points_for_selected_date = 0
                         break
                     else:
+                        last_date = date
                         points_for_selected_date = points
             except AttributeError as e:
                 if 'name' in str(e):  # No matches have been found for this title
@@ -561,7 +570,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                     'type': 'markdown',
                 },
                 'Points': {
-                    'value': format_points_tooltip_based_on_search(domains_match, name),
+                    'value': format_points_tooltip_based_on_search(domains_match, name, last_date, publication_type),
                     'type': 'markdown'
                 },
                 'Date': {'value': 'Kliknij, by zobaczyć szczegóły', 'type': 'text'},
@@ -641,6 +650,13 @@ def update_sidebar_on_row_click(
     ]
 
     past_points = [
+        html.Tr([
+            html.Td(date, title=table_tooltips[0]),
+            html.Td(points, 
+                title=table_tooltips[1] + '\nPunktacja według starego systemu (max 50 pkt)', 
+                style={'text-decoration': 'underline'}),
+        ]) if publication_type == 'czasopisma' and int(date[:4]) < 2018 
+        else 
         html.Tr([
             html.Td(date, title=table_tooltips[0]),
             html.Td(points, title=table_tooltips[1]),

@@ -14,6 +14,10 @@ monographs:
 
 # List of documents with points for journals/conferences
 journals:
+  - url: https://www.gov.pl/web/edukacja-i-nauka/komunikat-w-sprawie-wykazu-czasopism-naukowych-wraz-z-liczba-punktow-przyznanych-za-publikacje-naukowe-w-tych-czasopismach-ustalony-na-podstawie-wykazow-ogloszonych-w-latach-2013-2016
+    date: 25.01.2017
+    title: Komunikat Ministra Nauki i Szkolnictwa Wyzszego z dnia 25 stycznia 2017 r. w sprawie wykazu czasopism naukowych wraz z liczbą punktów przyznanych za publikacje naukowe w tych czasopismach, ustalonego na podstawie wykazów ogłoszonych w latach 2013-2016 
+
   - url: https://www.gov.pl/web/edukacja-i-nauka/nowe-rozszerzone-wykazy-czasopism-naukowych-i-recenzowanych-materialow-z-konferencji-miedzynarodowych-oraz-wydawnictw-monografii-naukowych
     date: 18.12.2019
     title: Komunikat Ministra Nauki i Szkolnictwa Wyzszego z dnia 18 grudnia 2019 roku w sprawie wykazu czasopism naukowych i recenzowanych materialow z konferencji miedzynarodowych

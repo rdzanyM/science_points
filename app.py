@@ -643,6 +643,13 @@ def update_sidebar_on_row_click(
     past_points = [
         html.Tr([
             html.Td(date, title=table_tooltips[0]),
+            html.Td(points, 
+                title=table_tooltips[1] + '\nPunktacja według starego systemu (max 50 pkt)', 
+                style={'text-decoration': 'underline'}),
+        ]) if publication_type == 'czasopisma' and int(date[:4]) < 2018 
+        else 
+        html.Tr([
+            html.Td(date, title=table_tooltips[0]),
             html.Td(points, title=table_tooltips[1]),
         ])
         for _, date, points in selected_row['PointsHistory']

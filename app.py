@@ -460,11 +460,17 @@ def upload_file(content):
     State('textarea-import', 'value'),
 )
 def update_search_table(add_row_clicks, import_clicks, data, columns, import_text):
-    if add_row_clicks is not None:
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if button_id == 'button-add-row':
         data.append({c['id']: '' for c in columns})
         return data
 
-    if not import_clicks or not import_text:
+    if button_id != 'button-do-import' or not import_text:
         return data
 
     try:
@@ -481,8 +487,9 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
     except Exception:
         # This should properly report the error, but meh, we can live without it
         raise PreventUpdate
-
-    return df.to_dict('records')
+    
+    data = df.to_dict('records')
+    return data
 
 
 @app.callback(

@@ -522,6 +522,8 @@ def search(n_clicks, domains, publication_type, search_table_data):
         for row in search_table_data:
             if not re.match(r'^\d{4}(-\d\d-\d\d)?$', row['Date']):
                 row['Date'] = pd.to_datetime('today').strftime('%Y-%m-%d')
+            elif re.match(r'^\d{4}$', row['Date']):
+                row['Date'] = row['Date'] + '-01-01'
             sim, df = query_function(row["Title"])
             try:
                 domains_match = True

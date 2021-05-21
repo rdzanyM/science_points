@@ -557,7 +557,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
 
             suggestions.append((row["Title"], elems))
             date_points.reverse()
-            if publication_type == 'czasopisma':
+            if publication_type == 'czasopisma' and last_date < '2019-12-18':
                 row['Date'] = row['Date'] + ' '
             data.append({
                 'Title': name,

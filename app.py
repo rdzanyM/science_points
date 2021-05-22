@@ -3,6 +3,7 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
+import re
 import base64
 from functools import partial
 from io import StringIO
@@ -519,7 +520,10 @@ def search(n_clicks, domains, publication_type, search_table_data):
         tooltip_data = []
         suggestions = []
         for row in search_table_data:
-
+            if not re.match(r'^\d{4}(-\d\d-\d\d)?$', row['Date']):
+                row['Date'] = pd.to_datetime('today').strftime('%Y-%m-%d')
+            elif re.match(r'^\d{4}$', row['Date']):
+                row['Date'] = row['Date'] + '-01-01'
             sim, df = query_function(row["Title"])
             try:
                 domains_match = True
@@ -532,6 +536,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 points_for_selected_date = None
                 for _, date, points in date_points:
                     if points_for_selected_date is None:
+                        last_date = date
                         points_for_selected_date = points
                     if date > row['Date']:
                         if publication_type != 'monografie' and len(domains_for_selected_row & set(domains)) == 0:

@@ -237,7 +237,7 @@ def get_results_wrapper() -> html.Div:
             ),
             html.Div(
                 [dbc.Button(
-                    'Eksportuj do .tsv',
+                    'Eksportuj do .csv',
                     id='button-export',
                     color='info',
                     outline=True,
@@ -724,7 +724,7 @@ def export_button_click(n_clicks, data):
     df = pd.DataFrame(data)
     df.drop(columns=['PointsHistory', 'Similarity'], inplace=True)
     df['Points'] = df['Points'].apply(lambda x: x[0])
-    return send_data_frame(df.to_csv, 'df.tsv', sep='\t')
+    return send_data_frame(df.to_csv, 'points.csv', sep=';', index=False)
 
 
 if __name__ == "__main__":

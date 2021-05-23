@@ -2,7 +2,7 @@
 
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
-
+import csv
 import re
 import base64
 from functools import partial
@@ -237,7 +237,7 @@ def get_results_wrapper() -> html.Div:
             ),
             html.Div(
                 [dbc.Button(
-                    'Eksportuj do .tsv',
+                    'Eksportuj do .csv',
                     id='button-export',
                     color='info',
                     outline=True,
@@ -280,11 +280,10 @@ def get_import_modal() -> dbc.Modal:
             dbc.ModalBody([
                 html.P('Wklej lub prześlij plik .csv z danymi do wyszukania.'),
                 html.Ul([
-                    html.Li('Plik nie powinien zawierać nagłówków.'),
-                    html.Li('Plik powinien zawierać dokładnie dwie kolumny: szukana nazwa i data.'
+                    html.Li('Plik powinien zawierać przynajmniej dwie kolumny: szukana nazwa i data.'
                             ' Wartości w drugiej kolumnie mogą zostać pominięte, ale separator musi być obecny.'),
                     html.Li('Kolumny mogą być rozdzielone znakami , ; lub tabulatora.'),
-                    html.Li('Jeśli to konieczne, pola mogą być zawarte w cudzysłowach, np.: "nazwa".'),
+                    html.Li('Jeśli to konieczne, wartości mogą być zawarte w cudzysłowach, np.: "nazwa".'),
                     html.Li('Daty powinny być w formacie YYYY lub YYYY-MM-DD.'),
                 ]),
                 dcc.Upload(
@@ -311,7 +310,20 @@ def get_import_modal() -> dbc.Modal:
                         'height': '12rem',
                     },
                     className='text-monospace',
-                )
+                    debounce=True,
+                ),
+                dbc.FormGroup(
+                    id='group-cb-import-headers',
+                    className='mt-2',
+                    children=[
+                        dbc.Checkbox(id='checkbox-import-headers'),
+                        dbc.Label(
+                            'Moje dane mają nagłówki',
+                            html_for='checkbox-import-headers',
+                            className='form-check-label',
+                        )
+                    ]
+                ),
             ]),
             dbc.ModalFooter(
                 [
@@ -453,14 +465,47 @@ def upload_file(content):
 
 
 @app.callback(
+    Output('checkbox-import-headers', 'checked'),
+    Input('textarea-import', 'value'),
+)
+def guess_headers(content: str) -> bool:
+    lines = (content or '').strip().split('\n')
+    if len(lines) < 2:
+        return False
+
+    h_line = lines[0]
+    if len(h_line) < 3:
+        return False
+
+    # all of these have the same length
+    known_variants = ['Title;Points', 'Title,Points', 'Title\tPoints']
+    if lines[0][:len(known_variants[0])] in known_variants:
+        # Probably a reimport of exported data
+        return True
+
+    try:
+        dialect = csv.Sniffer().sniff(content.strip())
+    except csv.Error:
+        return False
+
+    header = lines[0].split(str(dialect.delimiter))
+    if len(header) >= 2 and not re.search(r'\d\d', header[1]):
+        # The second column name doesn't look like a date, assume it's a header
+        return True
+
+    return False
+
+
+@app.callback(
     Output('search-table', 'data'),
     Input('button-add-row', 'n_clicks'),
     Input('button-do-import', 'n_clicks'),
     State('search-table', 'data'),
     State('search-table', 'columns'),
     State('textarea-import', 'value'),
+    State('checkbox-import-headers', 'checked'),
 )
-def update_search_table(add_row_clicks, import_clicks, data, columns, import_text):
+def update_search_table(add_row_clicks, import_clicks, data, columns, import_text, import_header: bool):
     ctx = dash.callback_context
     if not ctx.triggered:
         button_id = 'No clicks yet'
@@ -478,11 +523,13 @@ def update_search_table(add_row_clicks, import_clicks, data, columns, import_tex
         df = pd.read_csv(
             StringIO(import_text),
             names=('Title', 'Date'),
+            header=0 if import_header else None,
             parse_dates=False,
             quotechar='"',
             sep=None,
             dtype='str',
             skip_blank_lines=True,
+            usecols=[0, 1],
             engine='python',
         ).fillna('')
     except Exception:
@@ -724,7 +771,7 @@ def export_button_click(n_clicks, data):
     df = pd.DataFrame(data)
     df.drop(columns=['PointsHistory', 'Similarity'], inplace=True)
     df['Points'] = df['Points'].apply(lambda x: x[0])
-    return send_data_frame(df.to_csv, 'df.tsv', sep='\t')
+    return send_data_frame(df.to_csv, 'points.csv', sep=';', index=False)
 
 
 if __name__ == "__main__":

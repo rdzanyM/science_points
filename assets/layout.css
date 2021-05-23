@@ -56,3 +56,11 @@
 p+ol, p+ul {
     margin-top: -0.8rem !important;
 }
+
+#group-cb-import-headers {
+    margin-bottom: 0 !important;
+}
+
+#group-cb-import-headers label {
+    margin-left: 0.3rem;
+}

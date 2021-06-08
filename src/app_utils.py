@@ -27,8 +27,9 @@ def format_suggestions_based_on_search(searched_term: str, search_result: pd.Dat
         return f'Szukano: *{searched_term}*, znaleziono tylko powyższy wynik.'
 
     markdown_value = f'Szukano: *{searched_term}*.\n\n Inne sugestie:'
-    for i in range(1, min(len(search_result), 3)):
-        markdown_value += f'\n{i}. {search_result.name.iloc[i]}'
+
+    for i, r in search_result.iloc[1:4].iterrows():
+        markdown_value += f"\n{i}. {r['name']} ({r['score']:.0%})"
     return markdown_value
 
 
@@ -37,8 +38,8 @@ def format_suggestions_based_on_search_sidebar(searched_term: str, search_result
         return f'Szukano: *{searched_term}*, brak innych sugestii.'
 
     markdown_value = f'Szukano: *{searched_term}*.\n\n Inne sugestie:'
-    for i in range(min(len(search_result), 3)):
-        markdown_value += f'\n* {search_result[i]}'
+    for r in search_result[:3]:
+        markdown_value += f'\n* {r[0]} ({r[1]:.0%})'
     return markdown_value
 
 

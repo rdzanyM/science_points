@@ -99,56 +99,54 @@ class IndexReader:
         self.matching_domains_boost = config['search']['matching_domains_boost']
         self.name_parser = QueryParser('name', schema, plugins=[], group=OrGroup)
 
-    def query_monographs(self, text: str) -> Tuple[float, pd.DataFrame]:
+    def query_monographs(self, text: str) -> pd.DataFrame:
         """
         :param text: publisher name to search for
-        :return: (top candidate similarity to query, DataFrame with results)
+        :return: DataFrame with results
         """
         return self.__query(self.index_m, text, set())
 
-    def query_journals(self, text: str, domains: [str]) -> Tuple[float, pd.DataFrame]:
+    def query_journals(self, text: str, domains: [str]) -> pd.DataFrame:
         """
         :param text: journal name to search for
         :param domains: list of domains the user is interested in, this will
         help boost relevant journals
-        :return: (top candidate similarity to query, DataFrame with results)
+        :return: DataFrame with results
         """
         return self.__query(self.index_j, text, set(domains))
 
-    def query_conferences(self, text: str) -> Tuple[float, pd.DataFrame]:
+    def query_conferences(self, text: str) -> pd.DataFrame:
         """
         :param text: conference name to search for
-        :return: (top candidate similarity to query, DataFrame with results)
+        :return: DataFrame with results
         """
         return self.__query(self.index_c, text, set())
 
-    def __query(self, index: Index, text: str, domains: Set[str]) -> Tuple[float, pd.DataFrame]:
+    def __query(self, index: Index, text: str, domains: Set[str]) -> pd.DataFrame:
         q = self.name_parser.parse(text)
 
         with index.searcher() as s:
             results = []
-            for hit in s.search(q, limit=20):
+            for hit in s.search(q, limit=6):
                 ds = set((hit.get('domains') or '').split(','))
                 results.append({
-                    'score': hit.score,
+                    'raw_score': hit.score,
                     'id': hit['id'],
                     'name': hit['name'],
                     'domains_boost': self.matching_domains_boost if len(ds & domains) > 0 else 1
                 })
 
         if len(results) == 0:
-            return 0, pd.DataFrame()
+            return pd.DataFrame()
 
         df = pd.DataFrame.from_records(results, index='id')
-        df['score'] = df['score'] * df['domains_boost']
-        df = df.sort_values(by='score', ascending=False).iloc[:5]
 
-        # Rescale the results
-        df['score'] = df['score'] / df['score'].max()
+        # Compute accurate score based on string similarity (lowercased)
+        df['score'] = df['name'].apply(
+            # "Sharpen" the similarity to make it more intuitive
+            lambda name: jellyfish.jaro_winkler_similarity(name.lower(), text.lower()) ** 1.5
+        )
 
-        # Compute absolute similarity, but first lowercase both strings
-        sim = jellyfish.jaro_winkler_similarity(df.iloc[0]['name'].lower(), text.lower())
-        # "Sharpen" the similarity to make it more intuitive
-        sim **= 1.5
-
-        return sim, df
+        df['score'] = df['score'] * df['domains_boost'] / self.matching_domains_boost
+        df = df.sort_values(by='score', ascending=False)
+        return df.reset_index(drop=True)

@@ -578,10 +578,11 @@ def search(n_clicks, domains, publication_type, search_table_data):
                 row['Date'] = pd.to_datetime('today').strftime('%Y-%m-%d')
             elif re.match(r'^\d{4}$', row['Date']):
                 row['Date'] = row['Date'] + '-01-01'
-            sim, df = query_function(row["Title"])
+            df = query_function(row["Title"])
             try:
                 domains_match = True
                 name = df.name.iloc[0]
+                sim = df.score.iloc[0]
                 if publication_type == 'czasopisma':
                     domains_for_selected_row = set(db_cursor.get_journal_domains(name))
                 elif publication_type == 'konferencje':
@@ -602,7 +603,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                         points_for_selected_date = points
             except AttributeError as e:
                 if 'name' in str(e):  # No matches have been found for this title
-                    sim = 0.0
+                    sim = 0.
                     name = ''
                     date_points = []
                     points_for_selected_date = 0
@@ -610,7 +611,7 @@ def search(n_clicks, domains, publication_type, search_table_data):
                     raise e
 
             try:
-                elems = df['name'].tolist()[1:]
+                elems = df[['name', 'score']].values.tolist()[1:]
             except:
                 elems = []
 

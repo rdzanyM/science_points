@@ -3,11 +3,11 @@ App is available at https://ministry-points.herokuapp.com/
 
 ## Deployment <a href="https://dashboard.heroku.com/apps/ministry-points"><img src="https://user-images.githubusercontent.com/43205483/120186868-5f5d0c00-c214-11eb-8d02-615152c161c7.png" width="32" height="32"></a>
 
-The app is deployed on Heroku, using free dynos (lightweight, isolated Linux containers). They have a [limit](https://devcenter.heroku.com/articles/free-dyno-hours) of 550 hours of activity per month. They sleep after 30 minutes of inactivity to preserve remaining free hours. Because of that the first opening of an app can be a bit slower.  
-
-Managing the deployed app (viewing logs, setting url etc.) is available through the Heroku account. To have the access, the account has to be added as a collaborator. The app ownership can also be trasfered to a chosen account. If for some reason access cannot be granted, one could also fork this repository and [link their own app](https://devcenter.heroku.com/articles/github-integration) to this fork.  
+The app is deployed on Heroku, using free dynos (lightweight, isolated Linux containers). They have a [limit](https://devcenter.heroku.com/articles/free-dyno-hours) of 550 hours of activity per month. They sleep after 30 minutes of inactivity to preserve remaining free hours. Because of that the first opening of an app can be a bit slower.  This issue was fixed by adding the credit card data on heroku account, which increased the limit to 1000h per month. The app is now pinged every 20 minutes via [uptimerobot](https://uptimerobot.com) to keep it awake. 
 
 The Heroku app is linked to this GitHub repository and is updated after every change to the *deploy* branch. 
+
+Managing the deployed app (viewing logs, setting url etc.) is available through the Heroku account. To have the access, the account has to be added as a collaborator. The app ownership can also be trasfered to a chosen account (but a credit card data would have to be added if one wants the app to be always awake for free). If for some reason access cannot be granted, one could also fork this repository and [link their own app](https://devcenter.heroku.com/articles/github-integration) to this fork.  
 
 ## Updating the data
 ### Access
